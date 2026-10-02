@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Joel vs December</title>
+<meta name="description" content="Big belly to six-pack by December 25. No gym — a living room, a street, and a 3D body that does the workout with me.">
+<meta name="theme-color" content="#121314" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#C6CACD" media="(prefers-color-scheme: light)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23121314'/%3E%3Ccircle cx='16' cy='11' r='6' fill='%23F2A93B'/%3E%3Crect x='5' y='22' width='7' height='5' fill='%23F5C518'/%3E%3Crect x='12.5' y='22' width='7' height='5' fill='%23121314' stroke='%23F5C518' stroke-width='1'/%3E%3Crect x='20' y='22' width='7' height='5' fill='%23F5C518'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Big+Shoulders+Display:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --asphalt: #121314;
+    --panel: rgba(18, 19, 20, .72);
+    --line: rgba(237, 234, 226, .14);
+    --ink: #EDEAE2;
+    --muted: #A9A69E;
+    --sodium: #F2A93B;
+    --kerb: #F5C518;
+    --chalk: #EDEAE2;
+    --btn-ink: #161208;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --asphalt: #C6CACD;
+      --panel: rgba(236, 237, 236, .78);
+      --line: rgba(27, 28, 30, .14);
+      --ink: #1B1C1E;
+      --muted: #3A3D41;
+      --sodium: #8A5200;
+      --kerb: #F5C518;
+      --chalk: #26282B;
+      --btn-ink: #161208;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--asphalt);
+    color: var(--ink);
+    font: 400 15px/1.45 Archivo, system-ui, sans-serif;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  #stage { position: fixed; inset: 0; width: 100%; height: 100dvh; display: block; touch-action: pan-y; cursor: grab; }
+  #stage:active { cursor: grabbing; }
+
+  .hud { position: fixed; inset: 0; pointer-events: none; display: flex; flex-direction: column;
+         justify-content: space-between; padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); min-height: 100dvh; }
+  .hud > * { pointer-events: auto; }
+  .top { max-width: 420px; }
+  .eyebrow { font: 600 12px/1 Archivo, sans-serif; letter-spacing: .14em; text-transform: uppercase; color: var(--sodium); display: flex; gap: 8px; align-items: center; }
+  .eyebrow .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--sodium); box-shadow: 0 0 10px var(--sodium); }
+  h1 { font: 900 clamp(38px, 9vw, 64px)/.92 "Big Shoulders Display", sans-serif; text-transform: uppercase; letter-spacing: .005em; margin: 10px 0 8px; }
+  h1 em { font-style: normal; color: var(--sodium); }
+  .sub { color: var(--muted); max-width: 34ch; }
+
+  .strip { margin-top: 14px; display: grid; grid-template-columns: repeat(85, 1fr); gap: 1px; height: 18px; max-width: 340px; }
+  .strip i { background: var(--line); border-radius: 1px; }
+  .strip i.done { background: var(--kerb); }
+  .strip i.today { outline: 1px solid var(--sodium); outline-offset: 1px; }
+  .strip-legend { margin-top: 6px; font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; max-width: 340px; }
+
+  .bottom { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .btn { font: 700 20px/1 "Big Shoulders Display", sans-serif; letter-spacing: .06em; text-transform: uppercase;
+         min-height: 56px; padding: 0 34px; border: 0; border-radius: 6px; cursor: pointer; color: var(--btn-ink);
+         background: repeating-linear-gradient(-45deg, var(--kerb) 0 18px, #E2B30C 18px 36px);
+         box-shadow: 0 10px 30px -10px rgba(245, 197, 24, .55); transition: transform .08s ease, filter .15s ease; }
+  .btn:active { transform: translateY(1px) scale(.985); }
+  .btn:hover { filter: brightness(1.05); }
+  .btn:focus-visible, .icon-btn:focus-visible, .ghost:focus-visible { outline: 2px solid var(--sodium); outline-offset: 3px; }
+  .meta { font-size: 13px; color: var(--muted); }
+
+  .panel { background: var(--panel); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+           border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; width: min(420px, 100%); }
+  .now { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .now .name { font: 900 30px/1 "Big Shoulders Display", sans-serif; text-transform: uppercase; }
+  .now .set { font: 600 13px/1 Archivo, sans-serif; color: var(--muted); white-space: nowrap; letter-spacing: .04em; }
+  .count { display: flex; align-items: center; gap: 14px; margin-top: 10px; }
+  .count .n { font: 900 64px/.85 "Big Shoulders Display", sans-serif; font-variant-numeric: tabular-nums; min-width: 2.1ch; }
+  .count .of { font: 700 22px/1 "Big Shoulders Display", sans-serif; color: var(--muted); }
+  .tally { flex: 1; height: 52px; }
+  .tally path { stroke: var(--chalk); stroke-width: 2.6; stroke-linecap: round; fill: none; }
+  .tally path.todo { opacity: .14; }
+  .rest-label { font: 600 12px/1 Archivo, sans-serif; letter-spacing: .14em; text-transform: uppercase; color: var(--sodium); }
+  .plan { display: flex; gap: 4px; margin-top: 12px; }
+  .plan span { flex: 1; height: 4px; border-radius: 2px; background: var(--line); }
+  .plan span.on { background: var(--sodium); }
+  .plan span.done { background: var(--kerb); }
+  .controls { display: flex; gap: 8px; margin-top: 12px; }
+  .icon-btn, .ghost { min-width: 44px; min-height: 44px; border-radius: 6px; border: 1px solid var(--line); background: transparent;
+                      color: var(--ink); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+                      font: 600 14px/1 Archivo, sans-serif; padding: 0 12px; }
+  .icon-btn:active, .ghost:active { transform: scale(.97); }
+  .ghost { flex: 1; }
+  .icon-btn svg, .ghost svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .hidden { display: none !important; }
+  .toast { font: 600 14px/1.3 Archivo, sans-serif; color: var(--ink); background: var(--panel); border: 1px solid var(--line);
+           border-radius: 8px; padding: 10px 14px; backdrop-filter: blur(10px); text-align: center; }
+  .loading { position: fixed; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 13px; letter-spacing: .1em; text-transform: uppercase; pointer-events: none; }
+  @media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<canvas id="stage" aria-label="3D model of Joel. Drag to turn."></canvas>
+<div class="loading" id="loading">Loading body…</div>
+
+<div class="hud">
+  <header class="top" id="intro">
+    <div class="eyebrow"><span class="dot"></span><span id="daysLeft">Days to December 25</span></div>
+    <h1>Big belly.<br><em>Six-pack</em> by Christmas.</h1>
+    <p class="sub">No gym. A living room, the street outside, and this body doing the workout with me.</p>
+    <div class="strip" id="strip" aria-hidden="true"></div>
+    <div class="strip-legend"><span>Oct 2</span><span id="logged">0 workouts logged</span><span>Dec 25</span></div>
+  </header>
+
+  <footer class="bottom">
+    <div class="toast hidden" id="toast" role="status"></div>
+
+    <div id="idleUi" class="bottom">
+      <button class="btn" id="startBtn">Start workout</button>
+      <div class="meta">5 moves · 3 sets each · about 14 min</div>
+    </div>
+
+    <section class="panel hidden" id="workoutUi" aria-live="polite">
+      <div class="now">
+        <div>
+          <div class="rest-label hidden" id="restLabel">Rest · next up</div>
+          <div class="name" id="exName">Jumping twist</div>
+        </div>
+        <div class="set" id="exSet">Set 1 of 3</div>
+      </div>
+      <div class="count">
+        <div class="n" id="repN">0</div>
+        <div class="of" id="repOf">/ 24</div>
+        <svg class="tally" id="tally" viewBox="0 0 240 52" preserveAspectRatio="xMinYMid meet" aria-hidden="true"></svg>
+      </div>
+      <div class="plan" id="plan"></div>
+      <div class="controls">
+        <button class="icon-btn" id="pauseBtn" aria-label="Pause">
+          <svg id="pauseIcon" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+          <svg id="playIcon" class="hidden" viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+        </button>
+        <button class="ghost" id="skipBtn"><svg viewBox="0 0 24 24"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/></svg><span id="skipText">Skip set</span></button>
+        <button class="icon-btn" id="soundBtn" aria-label="Mute voice">
+          <svg id="soundOn" viewBox="0 0 24 24"><path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.4 18.4a9 9 0 0 0 0-12.7"/></svg>
+          <svg id="soundOff" class="hidden" viewBox="0 0 24 24"><path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/><line x1="22" x2="16" y1="9" y2="15"/><line x1="16" x2="22" y1="9" y2="15"/></svg>
+        </button>
+        <button class="icon-btn" id="stopBtn" aria-label="End workout">
+          <svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+    </section>
+  </footer>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+/* ---------- plan ---------- */
+const PLAN = [
+  { id: 'twist',    name: 'Jumping twist',   say: 'Jumping twists',   sets: 3, reps: 24, dur: 0.62 },
+  { id: 'jack',     name: 'Jumping jack',    say: 'Jumping jacks',    sets: 3, reps: 40, dur: 0.85 },
+  { id: 'windmill', name: 'Windmill',        say: 'Windmills',        sets: 3, reps: 30, dur: 1.5  },
+  { id: 'knee',     name: 'High knee',       say: 'High knees',       sets: 3, reps: 40, dur: 0.7  },
+  { id: 'crunch',   name: 'Elbow-knee crunch', say: 'Elbow to knee crunches', sets: 3, reps: 30, dur: 1.0 },
+];
+const REST_SET = 30, REST_EX = 45, GET_READY = 5;
+const START = new Date(2026, 9, 2), END = new Date(2026, 11, 25);
+const MODELS = ['models/joel.glb', 'models/xbot.glb'];
+
+/* ---------- log (per device for now) ---------- */
+const dayKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+function readLog() { try { return JSON.parse(localStorage.getItem('fit-log') || '[]'); } catch { return []; } }
+function writeLog(log) { try { localStorage.setItem('fit-log', JSON.stringify(log)); } catch {} }
+function renderStrip() {
+  const log = new Set(readLog()), today = dayKey(new Date());
+  const strip = document.getElementById('strip'); strip.innerHTML = '';
+  for (let i = 0; i < 85; i++) {
+    const d = new Date(START); d.setDate(d.getDate() + i);
+    const el = document.createElement('i'); const k = dayKey(d);
+    if (log.has(k)) el.className = 'done';
+    if (k === today) el.classList.add('today');
+    strip.appendChild(el);
+  }
+  const n = log.size;
+  document.getElementById('logged').textContent = `${n} workout${n === 1 ? '' : 's'} logged`;
+  const now = new Date(); now.setHours(0, 0, 0, 0);
+  const left = Math.max(0, Math.round((END - now) / 864e5));
+  document.getElementById('daysLeft').textContent = `${left} days to December 25`;
+}
+renderStrip();
+
+/* ---------- scene ---------- */
+const canvas = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
+const dark = matchMedia('(prefers-color-scheme: dark)');
+
+const hemi = new THREE.HemisphereLight(0x8fa3c0, 0x1a1712, 0.5);
+scene.add(hemi);
+const lamp = new THREE.SpotLight(0xffb45a, 60, 14, 0.52, 0.55, 1.4);
+lamp.position.set(0.4, 5.2, 0.9);
+lamp.castShadow = true;
+lamp.shadow.mapSize.set(1024, 1024);
+lamp.shadow.bias = -0.0004;
+scene.add(lamp, lamp.target);
+const rim = new THREE.DirectionalLight(0x9fb7ff, 0.6);
+rim.position.set(-3, 3, -4);
+scene.add(rim);
+
+// asphalt with grain
+function grainTexture(base, speck) {
+  const c = document.createElement('canvas'); c.width = c.height = 512;
+  const g = c.getContext('2d'); g.fillStyle = base; g.fillRect(0, 0, 512, 512);
+  for (let i = 0; i < 14000; i++) {
+    g.fillStyle = Math.random() < .5 ? speck : 'rgba(0,0,0,.25)';
+    g.globalAlpha = Math.random() * .5;
+    g.fillRect(Math.random() * 512, Math.random() * 512, 1.5, 1.5);
+  }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(8, 8);
+  t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+const ground = new THREE.Mesh(new THREE.CircleGeometry(30, 64), new THREE.MeshStandardMaterial({ roughness: .95 }));
+ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+
+// signature: painted kerb ring the body stands on
+const kerb = new THREE.Group();
+for (let i = 0; i < 28; i++) {
+  const seg = new THREE.Mesh(
+    new THREE.RingGeometry(0.86, 1.02, 6, 1, (i / 28) * Math.PI * 2, (Math.PI * 2) / 28 * 0.98),
+    new THREE.MeshStandardMaterial({ color: i % 2 ? 0x161616 : 0xf5c518, roughness: .7 })
+  );
+  seg.rotation.x = -Math.PI / 2; seg.position.y = 0.003; seg.receiveShadow = true; kerb.add(seg);
+}
+const pad = new THREE.Mesh(new THREE.CircleGeometry(0.86, 64), new THREE.MeshStandardMaterial({ roughness: .9 }));
+pad.rotation.x = -Math.PI / 2; pad.position.y = 0.002; pad.receiveShadow = true; kerb.add(pad);
+scene.add(kerb);
+
+// streetlight cone
+const coneMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+  uniforms: { col: { value: new THREE.Color(0xffa94a) }, strength: { value: .16 } },
+  vertexShader: `varying float vY; void main(){ vY = uv.y; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.); }`,
+  fragmentShader: `uniform vec3 col; uniform float strength; varying float vY; void main(){ gl_FragColor = vec4(col, pow(vY, 1.6) * strength); }`,
+});
+const cone = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 1.5, 5.2, 48, 1, true), coneMat);
+cone.position.set(0.25, 2.6, 0.55); cone.rotation.z = -0.04; scene.add(cone);
+
+function applyTheme() {
+  const d = dark.matches;
+  const bg = new THREE.Color(d ? 0x121314 : 0xc6cacd);
+  scene.background = bg;
+  scene.fog = new THREE.Fog(bg, d ? 5 : 6, d ? 13 : 16);
+  ground.material.map = grainTexture(d ? '#1d1e20' : '#9a9893', d ? '#3a3b3d' : '#c2c0ba');
+  ground.material.color.set(0xffffff); ground.material.needsUpdate = true;
+  pad.material.color.set(d ? 0x2a2b2d : 0xb3b1ab);
+  hemi.intensity = d ? 0.45 : 1.6;
+  hemi.color.set(d ? 0x8fa3c0 : 0xdfe6ee);
+  lamp.intensity = d ? 60 : 22;
+  coneMat.uniforms.strength.value = d ? .16 : .05;
+  rim.intensity = d ? .7 : .4;
+  renderer.toneMappingExposure = d ? 1 : 1.05;
+}
+applyTheme();
+dark.addEventListener('change', applyTheme);
+
+/* ---------- body ---------- */
+const turntable = new THREE.Group(); scene.add(turntable);
+const root = new THREE.Group(); turntable.add(root);
+const B = {};                        // bones by mixamo short name
+let allBones = [], rest = [], cur = [], restMinY = 0;
+let hipsRest = new THREE.Quaternion(), chestRest = new THREE.Quaternion();
+const restRel = {};
+
+const NEED = ['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'Head',
+  'LeftArm', 'LeftForeArm', 'LeftHand', 'RightArm', 'RightForeArm', 'RightHand',
+  'LeftUpLeg', 'LeftLeg', 'LeftFoot', 'LeftToeBase', 'RightUpLeg', 'RightLeg', 'RightFoot', 'RightToeBase'];
+
+async function loadBody() {
+  const loader = new GLTFLoader();
+  for (const url of MODELS) {
+    try { return await loader.loadAsync(url); } catch {}
+  }
+  throw new Error('No model');
+}
+
+loadBody().then(gltf => {
+  const body = gltf.scene;
+  body.traverse(o => {
+    if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; }
+    if (o.isBone) {
+      allBones.push(o);
+      const short = o.name.replace(/^mixamorig\d*:?/, '');
+      if (NEED.includes(short) && !B[short]) B[short] = o;
+    }
+  });
+  // normalise height to 1.8m, feet on the ground
+  const box = new THREE.Box3().setFromObject(body);
+  const h = box.max.y - box.min.y, s = 1.8 / h;
+  root.scale.setScalar(s);
+  root.updateMatrixWorld(true);
+  const box2 = new THREE.Box3().setFromObject(body);
+  const c = box2.getCenter(new THREE.Vector3());
+  body.position.x -= c.x / s; body.position.z -= c.z / s;
+  root.add(body);
+  root.updateMatrixWorld(true);
+
+  rest = allBones.map(b => b.quaternion.clone());
+  cur = allBones.map(b => b.quaternion.clone());
+  hipsRest.copy(relQuat(B.Hips)); chestRest.copy(relQuat(B.Spine2));
+  for (const k of ['Spine', 'Spine1', 'Spine2']) restRel[k] = relQuat(B[k]);
+  restMinY = feetMinY();
+  document.getElementById('loading').remove();
+}).catch(() => {
+  document.getElementById('loading').textContent = 'Body model missing — add models/joel.glb';
+});
+
+/* ---------- posing toolkit ---------- */
+const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _t = new THREE.Vector3();
+const _q = new THREE.Quaternion(), _qw = new THREE.Quaternion(), _qp = new THREE.Quaternion(), _qr = new THREE.Quaternion();
+const V = (x, y, z) => new THREE.Vector3(x, y, z).normalize();
+
+function rootQ() { return root.getWorldQuaternion(_qr); }
+function relQuat(bone) { const w = bone.getWorldQuaternion(new THREE.Quaternion()); return rootQ().clone().invert().multiply(w); }
+// frame of a bone now, expressed so that its rest orientation == root frame
+function frameOf(bone, restRel) { return bone.getWorldQuaternion(new THREE.Quaternion()).multiply(restRel.clone().invert()); }
+
+function setWorld(bone, worldQ) {
+  bone.parent.getWorldQuaternion(_qp).invert();
+  bone.quaternion.copy(_qp.multiply(worldQ));
+  bone.updateMatrixWorld(true);
+}
+function aim(bone, child, dir, frame) {
+  if (!bone || !child) return;
+  _t.copy(dir).normalize().applyQuaternion(frame);
+  bone.getWorldPosition(_a); child.getWorldPosition(_b);
+  _b.sub(_a).normalize();
+  _q.setFromUnitVectors(_b, _t);
+  bone.getWorldQuaternion(_qw).premultiply(_q);
+  setWorld(bone, _qw);
+}
+function turn(bone, axis, angle, frame) {
+  if (!bone || !angle) return;
+  _t.copy(axis).applyQuaternion(frame);
+  _q.setFromAxisAngle(_t, angle);
+  bone.getWorldQuaternion(_qw).premultiply(_q);
+  setWorld(bone, _qw);
+}
+const X = new THREE.Vector3(1, 0, 0), Y = new THREE.Vector3(0, 1, 0), Z = new THREE.Vector3(0, 0, 1);
+
+function feetMinY() {
+  let m = Infinity;
+  for (const k of ['LeftFoot', 'RightFoot', 'LeftToeBase', 'RightToeBase']) {
+    if (B[k]) { B[k].getWorldPosition(_a); m = Math.min(m, _a.y); }
+  }
+  return m;
+}
+
+/*
+  A pose = { hipsYaw, bend, twist, side (radians, spread over 3 spine bones),
+             arms: [leftUpper, leftFore, rightUpper, rightFore] in chest frame,
+             legs: [leftThigh, leftShin, rightThigh, rightShin] in pelvis frame,
+             jump (metres) }
+  Character faces +Z, +X is its left.
+*/
+function applyPose(p) {
+  const R = rootQ().clone();
+  turn(B.Hips, Y, p.hipsYaw || 0, R);
+  turn(B.Hips, X, p.hipBend || 0, R);
+  // spine moves relative to the pelvis, so a twist turns around a folded spine
+  const P = frameOf(B.Hips, hipsRest);
+  for (const k of ['Spine', 'Spine1', 'Spine2']) {
+    turn(B[k], X, (p.bend || 0) / 3, P);
+    turn(B[k], Z, (p.side || 0) / 3, P);
+    turn(B[k], Y, (p.twist || 0) / 3, frameOf(B[k], restRel[k]));
+  }
+  const chest = frameOf(B.Spine2, chestRest);
+  const [lu, lf, ru, rf] = p.arms;
+  aim(B.LeftArm, B.LeftForeArm, lu, chest);   aim(B.LeftForeArm, B.LeftHand, lf, chest);
+  aim(B.RightArm, B.RightForeArm, ru, chest); aim(B.RightForeArm, B.RightHand, rf, chest);
+  // legs follow the hips' turn but not their fold, so feet stay planted
+  const pelvis = R.clone().multiply(new THREE.Quaternion().setFromAxisAngle(Y, p.hipsYaw || 0));
+  const [lt, ls, rt, rs] = p.legs;
+  aim(B.LeftUpLeg, B.LeftLeg, lt, pelvis);    aim(B.LeftLeg, B.LeftFoot, ls, pelvis);
+  aim(B.RightUpLeg, B.RightLeg, rt, pelvis);  aim(B.RightLeg, B.RightFoot, rs, pelvis);
+  aim(B.LeftFoot, B.LeftToeBase, V(0.08, -0.45, 1), pelvis);
+  aim(B.RightFoot, B.RightToeBase, V(-0.08, -0.45, 1), pelvis);
+  // keep the head looking roughly ahead of the chest
+  if (p.headBend) turn(B.Neck, X, p.headBend, frameOf(B.Spine2, chestRest));
+}
+
+const wave = s => 0.5 - 0.5 * Math.cos(2 * Math.PI * s);   // 0 → 1 → 0
+const arc = s => Math.sin(Math.PI * s);                      // 0 → 1 → 0, sharper ends
+const DOWN_ARMS = [V(0.16, -1, 0.02), V(0.12, -1, 0.14), V(-0.16, -1, 0.02), V(-0.12, -1, 0.14)];
+const STRAIGHT_LEGS = [V(0.05, -1, 0), V(0.05, -1, -0.02), V(-0.05, -1, 0), V(-0.05, -1, -0.02)];
+
+const MOVES = {
+  idle(t) {
+    const br = Math.sin(t * 1.6);
+    return { bend: 0.015 * br, arms: DOWN_ARMS, legs: STRAIGHT_LEGS, jump: 0 };
+  },
+  jack(s) {
+    const e = wave(s), th = 0.25 + e * 2.65;
+    return {
+      arms: [V(Math.sin(th), -Math.cos(th), 0.08), V(Math.sin(th + .12), -Math.cos(th + .12), 0.1),
+             V(-Math.sin(th), -Math.cos(th), 0.08), V(-Math.sin(th + .12), -Math.cos(th + .12), 0.1)],
+      legs: [V(0.05 + 0.32 * e, -1, 0), V(0.05 + 0.32 * e, -1, -0.02), V(-0.05 - 0.32 * e, -1, 0), V(-0.05 - 0.32 * e, -1, -0.02)],
+      jump: 0.09 * Math.abs(Math.sin(2 * Math.PI * s)),
+    };
+  },
+  twist(s, side) {
+    const e = arc(s), yaw = side * 0.75 * e;
+    return {
+      hipsYaw: yaw, twist: -yaw * 0.95,
+      arms: [V(0.75, -0.55, 0.35), V(-0.35, 0.05, 1), V(-0.75, -0.55, 0.35), V(0.35, 0.05, 1)],
+      legs: [V(0.07, -1, 0.18), V(0.07, -1, -0.12), V(-0.07, -1, 0.18), V(-0.07, -1, -0.12)],
+      jump: 0.1 * e,
+    };
+  },
+  windmill(s, side) {
+    const e = wave(s);
+    return {
+      hipBend: 0.95 * e, bend: 0.45 * e, twist: side * 1.25 * e, headBend: -0.25 * e,
+      arms: [V(1, 0.02, 0), V(1, 0.02, 0.02), V(-1, 0.02, 0), V(-1, 0.02, 0.02)],
+      legs: [V(0.36, -1, 0), V(0.36, -1, 0), V(-0.36, -1, 0), V(-0.36, -1, 0)],
+      jump: 0,
+    };
+  },
+  knee(s, side) {
+    const k = 1.55 * arc(s), phi = side * 0.85 * arc(s);
+    const up = (sx) => [V(sx * 0.07, -Math.cos(k), Math.sin(k)), V(sx * 0.05, -1, -0.08 + 0.1 * (k / 1.55))];
+    const L = side > 0 ? up(1) : [STRAIGHT_LEGS[0], STRAIGHT_LEGS[1]];
+    const Rl = side < 0 ? up(-1) : [STRAIGHT_LEGS[2], STRAIGHT_LEGS[3]];
+    // arms pump opposite to the lifted knee
+    const la = -phi, ra = phi;
+    return {
+      arms: [V(0.12, -Math.cos(la), Math.sin(la)), V(0.06, -Math.cos(la + 1.45), Math.sin(la + 1.45)),
+             V(-0.12, -Math.cos(ra), Math.sin(ra)), V(-0.06, -Math.cos(ra + 1.45), Math.sin(ra + 1.45))],
+      legs: [...L, ...Rl],
+      jump: 0.035 * arc(s), bend: 0.06,
+    };
+  },
+  crunch(s, side) {
+    const e = arc(s), k = 1.35 * e;
+    const lift = sx => [V(-sx * 0.22 * e + sx * 0.06, -Math.cos(k), Math.sin(k)), V(sx * 0.04, -1, -0.05)];
+    const L = side > 0 ? lift(1) : [V(0.1, -1, 0), V(0.08, -1, -0.02)];
+    const Rl = side < 0 ? lift(-1) : [V(-0.1, -1, 0), V(-0.08, -1, -0.02)];
+    return {
+      // right elbow meets left knee (side>0), and the reverse
+      twist: side * 0.85 * e, bend: 0.7 * e, side: side * -0.35 * e, hipBend: 0.15 * e,
+      arms: [V(1, 0.45, -0.15), V(-0.55, 0.55, -0.6), V(-1, 0.45, -0.15), V(0.55, 0.55, -0.6)],
+      legs: [...L, ...Rl],
+      jump: 0,
+    };
+  },
+};
+
+let jumpNow = 0;
+function pose(p, dt) {
+  if (!B.Hips) return;
+  allBones.forEach((b, i) => b.quaternion.copy(rest[i]));
+  root.position.y = 0;
+  root.updateMatrixWorld(true);
+  applyPose(p);
+  const a = 1 - Math.exp(-dt * 22);
+  allBones.forEach((b, i) => { cur[i].slerp(b.quaternion, a); b.quaternion.copy(cur[i]); });
+  root.updateMatrixWorld(true);
+  jumpNow += ((p.jump || 0) - jumpNow) * Math.min(1, dt * 30);
+  root.position.y = restMinY - feetMinY() + jumpNow;
+}
+
+/* ---------- workout state machine ---------- */
+const $ = id => document.getElementById(id);
+const ui = { intro: $('intro'), idle: $('idleUi'), work: $('workoutUi'), name: $('exName'), set: $('exSet'), n: $('repN'),
+  of: $('repOf'), tally: $('tally'), plan: $('plan'), restLabel: $('restLabel'), skipText: $('skipText'), toast: $('toast') };
+let W = null;                 // { ex, set, phase: 'ready'|'go'|'rest', t, paused }
+let voice = true;
+
+PLAN.forEach(() => ui.plan.appendChild(document.createElement('span')));
+
+function say(text) {
+  if (!voice || !('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text); u.rate = 1.05; speechSynthesis.speak(u);
+}
+let actx;
+function beep(f = 880, len = 0.08) {
+  if (!voice) return;
+  try {
+    actx ||= new AudioContext();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.frequency.value = f; g.gain.setValueAtTime(0.12, actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + len);
+    o.connect(g).connect(actx.destination); o.start(); o.stop(actx.currentTime + len);
+  } catch {}
+}
+
+function drawTally(done, total) {
+  const groups = Math.ceil(total / 5); const gw = 240 / Math.max(groups, 1);
+  const unit = Math.min(gw * 0.78, 30); let d = '';
+  let out = '';
+  for (let i = 0; i < total; i++) {
+    const g = Math.floor(i / 5), j = i % 5, x0 = g * gw + 2;
+    const jitter = ((i * 37) % 7 - 3) * 0.35;
+    const path = j < 4
+      ? `M${x0 + j * unit / 4 + jitter} 10 L${x0 + j * unit / 4 - jitter} 42`
+      : `M${x0 - 3} 36 L${x0 + unit * 0.75 + 3} 16`;
+    out += `<path d="${path}" class="${i < done ? '' : 'todo'}"/>`;
+  }
+  ui.tally.innerHTML = out;
+}
+
+let wakeLock;
+async function keepAwake(on) {
+  try {
+    if (on && 'wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
+    else if (wakeLock) { await wakeLock.release(); wakeLock = null; }
+  } catch {}
+}
+
+function startWorkout() {
+  if (!B.Hips) return;
+  W = { ex: 0, set: 0, phase: 'ready', t: GET_READY, paused: false, lastRep: 0, lastSec: GET_READY };
+  ui.intro.classList.add('hidden'); ui.idle.classList.add('hidden'); ui.work.classList.remove('hidden');
+  ui.toast.classList.add('hidden');
+  keepAwake(true);
+  renderHud();
+  say(`Get ready. ${PLAN[0].say}. ${PLAN[0].reps} reps.`);
+}
+
+function endWorkout(finished) {
+  if (finished) {
+    const log = new Set(readLog()); log.add(dayKey(new Date())); writeLog([...log]);
+    renderStrip();
+    const n = log.size;
+    ui.toast.textContent = `Done. Workout ${n} logged. See you tomorrow.`;
+    ui.toast.classList.remove('hidden');
+    say('Workout done. Well done Joel.');
+    setTimeout(() => ui.toast.classList.add('hidden'), 6000);
+  }
+  W = null; keepAwake(false);
+  ui.work.classList.add('hidden'); ui.idle.classList.remove('hidden'); ui.intro.classList.remove('hidden');
+}
+
+function renderHud() {
+  const ex = PLAN[W.ex];
+  const resting = W.phase !== 'go';
+  ui.restLabel.classList.toggle('hidden', !resting);
+  ui.restLabel.textContent = W.phase === 'ready' && W.ex === 0 && W.set === 0 ? 'Get ready · first up' : 'Rest · next up';
+  ui.name.textContent = ex.name;
+  ui.set.textContent = `Set ${W.set + 1} of ${ex.sets}`;
+  ui.skipText.textContent = resting ? 'Skip rest' : 'Skip set';
+  ui.tally.classList.toggle('hidden', resting);
+  if (resting) { ui.n.textContent = Math.ceil(W.t); ui.of.textContent = `sec · ${ex.reps} reps`; }
+  else { ui.n.textContent = W.lastRep; ui.of.textContent = `/ ${ex.reps}`; drawTally(W.lastRep, ex.reps); }
+  [...ui.plan.children].forEach((el, i) => el.className = i < W.ex ? 'done' : i === W.ex ? 'on' : '');
+}
+
+function nextSet() {
+  const ex = PLAN[W.ex];
+  if (W.set + 1 < ex.sets) {
+    W.set++; W.phase = 'rest'; W.t = REST_SET;
+    say(`Rest. ${ex.sets - W.set === 1 ? 'Last set' : 'Set ' + (W.set + 1)} coming up.`);
+  } else if (W.ex + 1 < PLAN.length) {
+    W.ex++; W.set = 0; W.phase = 'rest'; W.t = REST_EX;
+    say(`Rest. Next, ${PLAN[W.ex].say}.`);
+  } else return endWorkout(true);
+  W.lastSec = Math.ceil(W.t); renderHud();
+}
+
+function tickWorkout(dt) {
+  if (W.paused) return;
+  const ex = PLAN[W.ex];
+  if (W.phase !== 'go') {
+    W.t -= dt;
+    const sec = Math.ceil(W.t);
+    if (sec !== W.lastSec) { W.lastSec = sec; if (sec <= 3 && sec > 0) beep(660); renderHud(); }
+    if (W.t <= 0) { W.phase = 'go'; W.t = 0; W.lastRep = 0; beep(990, 0.18); renderHud(); }
+    return;
+  }
+  W.t += dt;
+  const rep = Math.floor(W.t / ex.dur);
+  if (rep !== W.lastRep) {
+    W.lastRep = rep; beep(rep % 5 === 0 ? 760 : 520, 0.04); renderHud();
+    if (rep >= ex.reps) nextSet();
+  }
+}
+
+const DEBUG = new URLSearchParams(location.search);
+function currentPose(clock) {
+  if (DEBUG.has('move')) { const m = DEBUG.get('move'), d = PLAN.find(x => x.id === m)?.dur || 1, ph = DEBUG.has('s') ? +DEBUG.get('s') : (clock % d) / d;
+    return m === 'idle' ? MOVES.idle(clock) : MOVES[m](ph, +(DEBUG.get('side') || 1)); }
+  if (!W || W.phase !== 'go') return MOVES.idle(clock);
+  const ex = PLAN[W.ex], s = (W.t % ex.dur) / ex.dur, rep = Math.floor(W.t / ex.dur);
+  return MOVES[ex.id](s, rep % 2 ? -1 : 1);
+}
+
+$('startBtn').onclick = startWorkout;
+$('stopBtn').onclick = () => endWorkout(false);
+$('skipBtn').onclick = () => {
+  if (!W) return;
+  if (W.phase === 'go') nextSet(); else { W.t = 0.01; }
+};
+$('pauseBtn').onclick = () => {
+  if (!W) return; W.paused = !W.paused;
+  $('pauseIcon').classList.toggle('hidden', W.paused); $('playIcon').classList.toggle('hidden', !W.paused);
+  $('pauseBtn').setAttribute('aria-label', W.paused ? 'Resume' : 'Pause');
+  if (W.paused) speechSynthesis?.cancel();
+};
+$('soundBtn').onclick = () => {
+  voice = !voice;
+  $('soundOn').classList.toggle('hidden', !voice); $('soundOff').classList.toggle('hidden', voice);
+  $('soundBtn').setAttribute('aria-label', voice ? 'Mute voice' : 'Unmute voice');
+  if (!voice) speechSynthesis?.cancel();
+};
+addEventListener('keydown', e => {
+  if (e.key === 'Escape' && W) endWorkout(false);
+  if (e.key === ' ' && W && e.target === document.body) { e.preventDefault(); $('pauseBtn').click(); }
+});
+
+/* ---------- turning ---------- */
+let spin = 0, dragging = false, lastX = 0, dragVel = 0;
+canvas.addEventListener('pointerdown', e => { dragging = true; lastX = e.clientX; dragVel = 0; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener('pointermove', e => { if (!dragging) return; const dx = e.clientX - lastX; lastX = e.clientX; spin += dx * 0.01; dragVel = dx * 0.01; });
+canvas.addEventListener('pointerup', () => { dragging = false; });
+const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+
+/* ---------- loop ---------- */
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / h;
+  narrow = w / h < 0.8;
+  camera.fov = narrow ? 38 : 30;
+  camera.position.set(0, narrow ? 1.05 : 1.15, narrow ? 5.9 : 5.2);
+  camera.updateProjectionMatrix();
+}
+// where the camera looks: idle leaves room for the headline above, a workout leaves room for the panel below
+let narrow = false, lookY = 0.9;
+function aimCamera(dt) {
+  const want = narrow ? (W ? 0.55 : 1.14) : (W ? 0.75 : 0.92);
+  lookY += (want - lookY) * Math.min(1, dt * 4);
+  camera.lookAt(0, lookY, 0);
+}
+addEventListener('resize', resize); resize();
+
+const clock = new THREE.Clock(); let elapsed = 0;
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(clock.getDelta(), 0.05); elapsed += dt;
+  if (W) {
+    tickWorkout(dt);
+    // face the camera at a three-quarter angle while working out
+    const target = 0.45;
+    const diff = Math.atan2(Math.sin(target - spin), Math.cos(target - spin));
+    if (!dragging) spin += diff * Math.min(1, dt * 3);
+  } else if (!dragging) {
+    dragVel *= 0.94;
+    spin += reduce.matches || DEBUG.has('spin') ? dragVel + (DEBUG.has('spin') ? 0 : 0) : 0.45 * dt + dragVel;
+    if (DEBUG.has('spin')) spin = +DEBUG.get('spin');
+  }
+  turntable.rotation.y = spin;
+  aimCamera(dt);
+  pose(currentPose(elapsed), dt);
+  renderer.render(scene, camera);
+});
+</script>
+</body>
+</html>
