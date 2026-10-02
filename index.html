@@ -67,6 +67,12 @@
   .strip i.today { outline: 1px solid var(--sodium); outline-offset: 1px; }
   .strip-legend { margin-top: 6px; font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; max-width: 340px; }
 
+  .food { margin-top: 12px; display: flex; gap: 10px; align-items: flex-start; max-width: 340px; padding: 10px 12px;
+          border-left: 3px solid var(--kerb); background: var(--panel); border-radius: 0 8px 8px 0; backdrop-filter: blur(8px); }
+  .food svg { width: 18px; height: 18px; flex: none; margin-top: 2px; stroke: var(--sodium); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .food-label { display: block; font: 600 11px/1 Archivo, sans-serif; letter-spacing: .14em; text-transform: uppercase; color: var(--sodium); margin-bottom: 4px; }
+  #foodRule { font: 500 14px/1.35 Archivo, sans-serif; color: var(--ink); }
+  @media (max-width: 600px) { .sub { display: none; } }
   .bottom { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 10px; }
   .btn { font: 700 20px/1 "Big Shoulders Display", sans-serif; letter-spacing: .06em; text-transform: uppercase;
          min-height: 56px; padding: 0 34px; border: 0; border-radius: 6px; cursor: pointer; color: var(--btn-ink);
@@ -135,6 +141,10 @@
     <p class="sub">No gym. A living room, the street outside, and this body doing the workout with me.</p>
     <div class="strip" id="strip" aria-hidden="true"></div>
     <div class="strip-legend"><span>Oct 2</span><span id="logged">0 workouts logged</span><span>Dec 25</span></div>
+    <div class="food">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>
+      <div><span class="food-label">Food rule today</span><span id="foodRule">No soft drinks. Water only.</span></div>
+    </div>
   </header>
 
   <footer class="bottom">
@@ -263,6 +273,36 @@ function renderStrip() {
   document.getElementById('daysLeft').textContent = `${left} days to December 25`;
 }
 renderStrip();
+
+/* ---------- food rule: one per day, same all day ---------- */
+const FOOD_RULES = [
+  'No soft drinks today. Water only.',
+  'Half the rice you normally eat. Double the vegetables.',
+  'One fist of swallow, not two. More soup, more fish or meat.',
+  'Nothing to eat after 8pm.',
+  'Drink 3 litres of water. Two glasses before breakfast.',
+  'Protein at every meal: eggs, fish, chicken or beans.',
+  'No bread today.',
+  'No fried snacks. No puff-puff, chin chin or plantain chips.',
+  'Fruit instead of biscuits.',
+  'Boil or grill. Nothing fried today.',
+  'Beans or moi moi instead of white rice.',
+  'Eat slowly. Stop when you are 80% full.',
+  'No alcohol today.',
+  'Cook at home. No fast food, no late buka.',
+  'Fill half your plate with efo, ugu or cabbage.',
+  'Eggs for breakfast, not bread and tea.',
+  'No Indomie today.',
+  'No sugar in your tea, pap or garri.',
+  'Use a small plate. Eat only when you are really hungry.',
+  'No juice cartons. Water or unsweetened zobo.',
+  'Boiled yam or plantain with eggs. No fried yam.',
+];
+{
+  const now = new Date(); now.setHours(0, 0, 0, 0);
+  const n = Math.max(0, Math.round((now - START) / 864e5));
+  document.getElementById('foodRule').textContent = FOOD_RULES[n % FOOD_RULES.length];
+}
 
 /* ---------- quotes ---------- */
 const QUOTES = [
@@ -889,7 +929,7 @@ let camDist = 5.6;
 const onFloor = () => { const m = DEBUG.get('move') || (W && W.plan[W.ex].id); return !!(m && EX[m]?.floor); };
 function aimCamera(dt) {
   const fl = onFloor();
-  const want = fl ? (narrow ? 0.05 : 0.3) : narrow ? (W ? 0.55 : 0.98) : (W ? 0.75 : 0.62);
+  const want = fl ? (narrow ? 0.05 : 0.3) : narrow ? (W ? 0.55 : 1.1) : (W ? 0.75 : 0.62);
   const dist = narrow ? (fl ? 6.6 : W ? 5.9 : 7.2) : W ? 5.2 : 6.6;
   lookY += (want - lookY) * Math.min(1, dt * 4);
   camDist += (dist - camDist) * Math.min(1, dt * 4);
