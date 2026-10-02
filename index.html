@@ -75,7 +75,18 @@
   .btn:active { transform: translateY(1px) scale(.985); }
   .btn:hover { filter: brightness(1.05); }
   .btn:focus-visible, .icon-btn:focus-visible, .ghost:focus-visible { outline: 2px solid var(--sodium); outline-offset: 3px; }
-  .meta { font-size: 13px; color: var(--muted); }
+  .meta { font-size: 13px; color: var(--muted); text-align: center; max-width: 34ch; }
+  #idleUi { width: 100%; }
+  @media (prefers-color-scheme: light) { .meta { color: var(--ink); } }
+  .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; width: min(420px, 100%); margin-bottom: 4px; }
+  .week button { min-height: 46px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--muted);
+                 font: 600 11px/1.15 Archivo, sans-serif; cursor: pointer; padding: 4px 0; backdrop-filter: blur(6px); }
+  .week button b { display: block; font: 700 14px/1 "Big Shoulders Display", sans-serif; letter-spacing: .04em; text-transform: uppercase; color: var(--ink); margin-top: 3px; }
+  .week button.today { border-color: var(--sodium); }
+  .week button[aria-pressed="true"] { background: var(--kerb); color: #161208; border-color: var(--kerb); }
+  .week button[aria-pressed="true"] b { color: #161208; }
+  .week button.done::after { content: ""; display: block; width: 5px; height: 5px; border-radius: 50%; background: currentColor; margin: 3px auto 0; }
+  .week button:focus-visible { outline: 2px solid var(--sodium); outline-offset: 2px; }
 
   .panel { background: var(--panel); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
            border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; width: min(420px, 100%); }
@@ -130,8 +141,9 @@
     <div class="toast hidden" id="toast" role="status"></div>
 
     <div id="idleUi" class="bottom">
+      <div class="week" id="week" role="group" aria-label="Pick a day"></div>
       <button class="btn" id="startBtn">Start workout</button>
-      <div class="meta">5 moves · 3 sets each · about 14 min</div>
+      <div class="meta" id="meta">5 moves · 3 sets each · about 14 min</div>
     </div>
 
     <section class="panel hidden" id="workoutUi" aria-live="polite">
@@ -170,16 +182,64 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-/* ---------- plan ---------- */
-const PLAN = [
-  { id: 'twist',    name: 'Jumping twist',   say: 'Jumping twists',   sets: 3, reps: 24, dur: 0.62 },
-  { id: 'jack',     name: 'Jumping jack',    say: 'Jumping jacks',    sets: 3, reps: 40, dur: 0.85 },
-  { id: 'windmill', name: 'Windmill',        say: 'Windmills',        sets: 3, reps: 30, dur: 1.5  },
-  { id: 'knee',     name: 'High knee',       say: 'High knees',       sets: 3, reps: 40, dur: 0.7  },
-  { id: 'crunch',   name: 'Elbow-knee crunch', say: 'Elbow to knee crunches', sets: 3, reps: 30, dur: 1.0 },
-];
-const REST_SET = 30, REST_EX = 45, GET_READY = 5;
 const START = new Date(2026, 9, 2), END = new Date(2026, 11, 25);
+
+/* ---------- plan ---------- */
+// every move the body knows. dur = seconds per rep; hold = count seconds instead of reps
+const EX = {
+  twist:    { name: 'Jumping twist',     say: 'Jumping twists',          dur: 0.62 },
+  jack:     { name: 'Jumping jack',      say: 'Jumping jacks',           dur: 0.85 },
+  windmill: { name: 'Windmill',          say: 'Windmills',               dur: 1.5 },
+  knee:     { name: 'High knee',         say: 'High knees',              dur: 0.7 },
+  crunch:   { name: 'Elbow-knee crunch', say: 'Elbow to knee crunches',  dur: 1.0 },
+  squat:    { name: 'Squat',             say: 'Squats',                  dur: 2.0 },
+  lunge:    { name: 'Lunge',             say: 'Lunges, alternate legs',  dur: 2.0 },
+  pushup:   { name: 'Push-up',           say: 'Push ups. Knees down is fine', dur: 2.0, floor: true },
+  plank:    { name: 'Plank',             say: 'Plank. Hold it',          dur: 1, hold: true, floor: true },
+  climber:  { name: 'Mountain climber',  say: 'Mountain climbers',       dur: 0.6, floor: true },
+  floorCrunch: { name: 'Crunch',         say: 'Crunches',                dur: 1.6, floor: true },
+  legRaise: { name: 'Leg raise',         say: 'Leg raises',              dur: 2.2, floor: true },
+  bicycle:  { name: 'Bicycle crunch',    say: 'Bicycle crunches',        dur: 1.1, floor: true },
+  russian:  { name: 'Russian twist',     say: 'Russian twists',          dur: 1.0, floor: true },
+  jog:      { name: 'Run',               say: 'Run',                     dur: 1, hold: true },
+};
+
+// base reps for week 1; reps grow 25% every four weeks
+const WORKOUTS = {
+  burn:     { name: 'Fat burn', short: 'Burn',  moves: [['twist', 24], ['jack', 40], ['windmill', 30], ['knee', 40], ['crunch', 30]] },
+  core:     { name: 'Core',     short: 'Core',  moves: [['plank', 30], ['floorCrunch', 15], ['legRaise', 10], ['bicycle', 20], ['climber', 20], ['russian', 20]] },
+  strength: { name: 'Strength', short: 'Power', moves: [['squat', 15], ['lunge', 16], ['pushup', 8], ['climber', 20], ['plank', 30]] },
+  run:      { name: 'Street run', short: 'Run' },
+  rest:     { name: 'Rest day', short: 'Rest' },
+};
+const SCHEDULE = ['rest', 'burn', 'core', 'run', 'strength', 'burn', 'run'];   // Sun..Sat
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+// run intervals by week: [run seconds, walk seconds, rounds]
+const RUNS = [[60, 120, 8], [60, 120, 8], [90, 90, 8], [90, 90, 8], [120, 60, 8], [120, 60, 8],
+              [180, 60, 6], [180, 60, 6], [300, 60, 4], [300, 60, 4], [600, 60, 3], [600, 60, 3], [600, 60, 3]];
+const REST_SET = 30, REST_EX = 45, GET_READY = 5;
+
+function weekOf(d = new Date()) {
+  const a = new Date(d); a.setHours(0, 0, 0, 0);
+  return Math.min(13, Math.max(1, Math.floor((a - START) / 864e5 / 7) + 1));
+}
+function buildWorkout(type, week) {
+  if (type === 'run') {
+    const [run, walk, rounds] = RUNS[week - 1];
+    return [{ id: 'jog', ...EX.jog, sets: rounds, reps: run, rest: walk, restLabel: 'Walk' }];
+  }
+  const w = WORKOUTS[type]; if (!w.moves) return [];
+  const mult = week <= 4 ? 1 : week <= 8 ? 1.25 : 1.5;
+  return w.moves.map(([id, reps]) => {
+    const n = Math.round(reps * mult);
+    return { id, ...EX[id], sets: 3, reps: EX[id].hold || id === 'lunge' ? n + (n % 2) : n };
+  });
+}
+function workoutMinutes(plan) {
+  let t = GET_READY;
+  plan.forEach((x, i) => { t += x.sets * x.reps * x.dur + (x.sets - 1) * (x.rest || REST_SET) + (i ? REST_EX : 0); });
+  return Math.round(t / 60);
+}
 const MODELS = ['models/joel.glb', 'models/xbot.glb'];
 
 /* ---------- log (per device for now) ---------- */
@@ -327,9 +387,13 @@ dark.addEventListener('change', applyTheme);
 
 /* ---------- body ---------- */
 const turntable = new THREE.Group(); scene.add(turntable);
-const root = new THREE.Group(); turntable.add(root);
+// orient pivots the whole body at the hips so it can lie down for floor moves
+const orient = new THREE.Group(); turntable.add(orient);
+const root = new THREE.Group(); orient.add(root);
+let hipH = 0.95;
 const B = {};                        // bones by mixamo short name
-let allBones = [], rest = [], cur = [], restMinY = 0;
+let allBones = [], rest = [], cur = [];
+const CONTACT = {};   // bone -> how far its surface sits below the joint
 let hipsRest = new THREE.Quaternion(), chestRest = new THREE.Quaternion();
 const restRel = {};
 
@@ -370,7 +434,11 @@ loadBody().then(gltf => {
   cur = allBones.map(b => b.quaternion.clone());
   hipsRest.copy(relQuat(B.Hips)); chestRest.copy(relQuat(B.Spine2));
   for (const k of ['Spine', 'Spine1', 'Spine2']) restRel[k] = relQuat(B[k]);
-  restMinY = feetMinY();
+  B.Hips.getWorldPosition(_a); hipH = _a.y;
+  orient.position.y = hipH; root.position.y = -hipH; orient.updateMatrixWorld(true);
+  for (const k of ['LeftFoot', 'RightFoot', 'LeftToeBase', 'RightToeBase']) { B[k].getWorldPosition(_a); CONTACT[k] = _a.y; }
+  Object.assign(CONTACT, { LeftHand: .04, RightHand: .04, Head: .11, Hips: .1, Spine: .11, Spine2: .12,
+    LeftLeg: .06, RightLeg: .06, LeftForeArm: .05, RightForeArm: .05 });
   document.getElementById('loading').remove();
 }).catch(() => {
   document.getElementById('loading').textContent = 'Body model missing — add models/joel.glb';
@@ -409,11 +477,10 @@ function turn(bone, axis, angle, frame) {
 }
 const X = new THREE.Vector3(1, 0, 0), Y = new THREE.Vector3(0, 1, 0), Z = new THREE.Vector3(0, 0, 1);
 
-function feetMinY() {
+// lowest point of the body's surface, from joints + rough flesh radius
+function lowestY() {
   let m = Infinity;
-  for (const k of ['LeftFoot', 'RightFoot', 'LeftToeBase', 'RightToeBase']) {
-    if (B[k]) { B[k].getWorldPosition(_a); m = Math.min(m, _a.y); }
-  }
+  for (const k in CONTACT) if (B[k]) { B[k].getWorldPosition(_a); m = Math.min(m, _a.y - CONTACT[k]); }
   return m;
 }
 
@@ -454,6 +521,15 @@ const wave = s => 0.5 - 0.5 * Math.cos(2 * Math.PI * s);   // 0 → 1 → 0
 const arc = s => Math.sin(Math.PI * s);                      // 0 → 1 → 0, sharper ends
 const DOWN_ARMS = [V(0.16, -1, 0.02), V(0.12, -1, 0.14), V(-0.16, -1, 0.02), V(-0.12, -1, 0.14)];
 const STRAIGHT_LEGS = [V(0.05, -1, 0), V(0.05, -1, -0.02), V(-0.05, -1, 0), V(-0.05, -1, -0.02)];
+
+// leg direction from hip angle k (0 = straight down, +π/2 = straight ahead) with the knee bent back by `knee`
+const leg = (sx, k, knee = 0) => [V(sx * 0.08, -Math.cos(k), Math.sin(k)), V(sx * 0.06, -Math.cos(k - knee), Math.sin(k - knee))];
+// floor direction / along-the-floor-toward-head, in the body's own frame, for a body pitched by th
+const floorDir = th => V(0, -Math.cos(th), Math.sin(th));
+const headDir = th => V(0, Math.sin(th), Math.cos(th));
+const mix = (a, b, t) => a.clone().lerp(b, t).normalize();
+const BEHIND_HEAD = [V(1, 0.45, -0.15), V(-0.55, 0.55, -0.6), V(-1, 0.45, -0.15), V(0.55, 0.55, -0.6)];
+const HALF = Math.PI / 2;
 
 const MOVES = {
   idle(t) {
@@ -501,6 +577,68 @@ const MOVES = {
       jump: 0.035 * arc(s), bend: 0.06,
     };
   },
+  squat(s) {
+    const e = wave(s), k = 1.4 * e, a = 1.45 * e;
+    return {
+      hipBend: 0.7 * e, bend: 0.1 * e,
+      arms: [V(0.15, -Math.cos(a), Math.sin(a)), V(0.12, -Math.cos(a), Math.sin(a)), V(-0.15, -Math.cos(a), Math.sin(a)), V(-0.12, -Math.cos(a), Math.sin(a))],
+      legs: [...leg(2.4, k, k + 0.45 * e), ...leg(-2.4, k, k + 0.45 * e)],
+    };
+  },
+  lunge(s, side) {
+    const e = arc(s);
+    const front = leg(side, 1.35 * e, 1.35 * e), back = leg(-side, -0.5 * e, 1.1 * e);
+    const hands = [V(0.75, -0.65, -0.15), V(-0.55, -0.1, 0.6), V(-0.75, -0.65, -0.15), V(0.55, -0.1, 0.6)];
+    return { arms: hands, legs: side > 0 ? [...front, ...back] : [...back, ...front] };
+  },
+  pushup(s) {
+    const e = wave(s), th = HALF - (0.4 - 0.3 * e), down = floorDir(th);
+    const up = sx => mix(down.clone().add(new THREE.Vector3(sx * 0.3, 0, 0)), V(sx * 0.6, -0.5, 0.3), e);
+    const fore = sx => down.clone().add(new THREE.Vector3(-sx * 0.15 * e, 0.1, 0)).normalize();
+    return { pitch: th, arms: [up(1), fore(1), up(-1), fore(-1)], legs: [...leg(0.7, 0), ...leg(-0.7, 0)] };
+  },
+  plank(s, side, t = 0) {
+    const th = HALF - 0.2;
+    return { pitch: th, bend: 0.01 * Math.sin(t * 1.6),
+      arms: [floorDir(th), mix(headDir(th), V(-1, 0, 0), 0.15), floorDir(th), mix(headDir(th), V(1, 0, 0), 0.15)],
+      legs: [...leg(0.6, 0), ...leg(-0.6, 0)] };
+  },
+  climber(s, side) {
+    const th = HALF - 0.4, k = 2.2 * arc(s), down = floorDir(th);
+    const drive = leg(side, k, k * 1.25), still = leg(-side, 0);
+    return { pitch: th, arms: [mix(down, V(0.3, 0, 0), 0.2), down, mix(down, V(-0.3, 0, 0), 0.2), down],
+      legs: side > 0 ? [...drive, ...still] : [...still, ...drive] };
+  },
+  floorCrunch(s) {
+    const e = wave(s);
+    return { pitch: -HALF, bend: 0.9 * e, headBend: 0.2 * e, arms: BEHIND_HEAD,
+      legs: [...leg(1.5, 0.95, 2.1), ...leg(-1.5, 0.95, 2.1)] };
+  },
+  legRaise(s) {
+    const e = wave(s), a = 0.08 + 1.4 * e, flat = V(0, -1, -0.15);
+    return { pitch: -HALF, arms: [mix(flat, V(1, 0, 0), 0.2), flat, mix(flat, V(-1, 0, 0), 0.2), flat],
+      legs: [...leg(0.6, a), ...leg(-0.6, a)] };
+  },
+  bicycle(s, side) {
+    const e = arc(s), drive = leg(side, 0.6 + 1.3 * e, 1.6), out = leg(-side, 0.5, 0.1);
+    return { pitch: -HALF, bend: 0.55, twist: side * 0.7 * e, arms: BEHIND_HEAD,
+      legs: side > 0 ? [...drive, ...out] : [...out, ...drive] };
+  },
+  russian(s, side) {
+    const e = Math.sin(2 * Math.PI * s);
+    const hands = [V(0.3, -0.3, 1), V(-0.45, 0, 1), V(-0.3, -0.3, 1), V(0.45, 0, 1)];
+    return { pitch: -0.7, twist: side * 0.8 * Math.abs(e) * Math.sign(e || 1), bend: 0.15, arms: hands,
+      legs: [...leg(1.5, 1.75, 1.5), ...leg(-1.5, 1.75, 1.5)] };
+  },
+  jog(s, side) {
+    const k = 0.8 * arc(s), phi = side * 0.6 * arc(s);
+    const L = side > 0 ? leg(1, k, k * 1.6) : leg(1, 0), Rl = side < 0 ? leg(-1, k, k * 1.6) : leg(-1, 0);
+    return {
+      arms: [V(0.12, -Math.cos(-phi), Math.sin(-phi)), V(0.06, -Math.cos(-phi + 1.45), Math.sin(-phi + 1.45)),
+             V(-0.12, -Math.cos(phi), Math.sin(phi)), V(-0.06, -Math.cos(phi + 1.45), Math.sin(phi + 1.45))],
+      legs: [...L, ...Rl], jump: 0.05 * arc(s), bend: 0.08,
+    };
+  },
   crunch(s, side) {
     const e = arc(s), k = 1.35 * e;
     const lift = sx => [V(-sx * 0.22 * e + sx * 0.06, -Math.cos(k), Math.sin(k)), V(sx * 0.04, -1, -0.05)];
@@ -516,19 +654,57 @@ const MOVES = {
   },
 };
 
-let jumpNow = 0;
+let jumpNow = 0, pitchNow = 0;
 function pose(p, dt) {
   if (!B.Hips) return;
+  pitchNow += ((p.pitch || 0) - pitchNow) * Math.min(1, dt * 5);
+  orient.rotation.x = pitchNow;
+  orient.position.y = hipH;
   allBones.forEach((b, i) => b.quaternion.copy(rest[i]));
-  root.position.y = 0;
-  root.updateMatrixWorld(true);
+  orient.updateMatrixWorld(true);
   applyPose(p);
   const a = 1 - Math.exp(-dt * 22);
   allBones.forEach((b, i) => { cur[i].slerp(b.quaternion, a); b.quaternion.copy(cur[i]); });
-  root.updateMatrixWorld(true);
+  orient.updateMatrixWorld(true);
   jumpNow += ((p.jump || 0) - jumpNow) * Math.min(1, dt * 30);
-  root.position.y = restMinY - feetMinY() + jumpNow;
+  orient.position.y = hipH - lowestY() + jumpNow;
 }
+
+/* ---------- day picker ---------- */
+let selDay = new Date().getDay();
+function dateForWeekday(wd) {          // this week's date for a weekday, Monday-first
+  const d = new Date(); d.setHours(0, 0, 0, 0);
+  const off = ((wd + 6) % 7) - ((d.getDay() + 6) % 7);
+  d.setDate(d.getDate() + off); return d;
+}
+function renderWeek() {
+  const wk = document.getElementById('week'), log = new Set(readLog()), today = new Date().getDay();
+  wk.innerHTML = '';
+  [1, 2, 3, 4, 5, 6, 0].forEach(wd => {
+    const b = document.createElement('button'), type = SCHEDULE[wd];
+    b.innerHTML = `${DAY_NAMES[wd]}<b>${WORKOUTS[type].short}</b>`;
+    b.setAttribute('aria-pressed', wd === selDay);
+    b.setAttribute('aria-label', `${DAY_NAMES[wd]}: ${WORKOUTS[type].name}`);
+    if (wd === today) b.classList.add('today');
+    if (log.has(dayKey(dateForWeekday(wd)))) b.classList.add('done');
+    b.onclick = () => { selDay = wd; renderWeek(); };
+    wk.appendChild(b);
+  });
+  const type = SCHEDULE[selDay], week = weekOf(), plan = buildWorkout(type, week);
+  const start = document.getElementById('startBtn'), meta = document.getElementById('meta');
+  const phase = week <= 4 ? 'Base' : week <= 8 ? 'Build' : 'Peak';
+  if (type === 'rest') {
+    start.classList.add('hidden');
+    meta.textContent = 'Rest day. Walk 30 minutes, stretch, sleep by 10pm. Muscles grow when you rest.';
+  } else {
+    start.classList.remove('hidden');
+    start.textContent = `Start ${WORKOUTS[type].name.toLowerCase()}`;
+    meta.textContent = type === 'run'
+      ? `Week ${Math.min(week, 12)} · ${plan[0].sets} × run ${fmtSec(plan[0].reps)} / walk ${fmtSec(plan[0].rest)} · ${workoutMinutes(plan)} min`
+      : `Week ${Math.min(week, 12)} · ${phase} · ${plan.length} moves × 3 sets · ${workoutMinutes(plan)} min`;
+  }
+}
+const fmtSec = n => n >= 60 ? `${n / 60} min` : `${n}s`;
 
 /* ---------- workout state machine ---------- */
 const $ = id => document.getElementById(id);
@@ -537,7 +713,6 @@ const ui = { intro: $('intro'), idle: $('idleUi'), work: $('workoutUi'), name: $
 let W = null;                 // { ex, set, phase: 'ready'|'go'|'rest', t, paused }
 let voice = true;
 
-PLAN.forEach(() => ui.plan.appendChild(document.createElement('span')));
 
 function say(text) {
   if (!voice || !('speechSynthesis' in window)) return;
@@ -581,18 +756,22 @@ async function keepAwake(on) {
 
 function startWorkout() {
   if (!B.Hips) return;
-  W = { ex: 0, set: 0, phase: 'ready', t: GET_READY, paused: false, lastRep: 0, lastSec: GET_READY };
+  const plan = buildWorkout(SCHEDULE[selDay], weekOf());
+  if (!plan.length) return;
+  W = { plan, ex: 0, set: 0, phase: 'ready', t: GET_READY, paused: false, lastRep: 0, lastSec: GET_READY };
+  ui.plan.innerHTML = ''; plan.forEach(() => ui.plan.appendChild(document.createElement('span')));
   ui.intro.classList.add('hidden'); ui.idle.classList.add('hidden'); ui.work.classList.remove('hidden');
   ui.toast.classList.add('hidden');
   keepAwake(true);
   renderHud();
-  say(`Get ready. ${PLAN[0].say}. ${PLAN[0].reps} reps.`);
+  const f = plan[0];
+  say(f.id === 'jog' ? `Street run. ${f.sets} rounds. Get ready to run.` : `Get ready. ${f.say}. ${f.reps} ${f.hold ? 'seconds' : 'reps'}.`);
 }
 
 function endWorkout(finished) {
   if (finished) {
     const log = new Set(readLog()); log.add(dayKey(new Date())); writeLog([...log]);
-    renderStrip();
+    renderStrip(); renderWeek();
     const n = log.size;
     ui.toast.textContent = `Done. Workout ${n} logged. See you tomorrow.`;
     ui.toast.classList.remove('hidden');
@@ -604,56 +783,65 @@ function endWorkout(finished) {
 }
 
 function renderHud() {
-  const ex = PLAN[W.ex];
-  const resting = W.phase !== 'go';
+  const ex = W.plan[W.ex];
+  const resting = W.phase !== 'go', first = W.phase === 'ready' && W.ex === 0 && W.set === 0;
+  const unit = ex.hold ? 's' : ' reps';
   ui.restLabel.classList.toggle('hidden', !resting);
-  ui.restLabel.textContent = W.phase === 'ready' && W.ex === 0 && W.set === 0 ? 'Get ready · first up' : 'Rest · next up';
-  ui.name.textContent = ex.name;
-  ui.set.textContent = `Set ${W.set + 1} of ${ex.sets}`;
-  ui.skipText.textContent = resting ? 'Skip rest' : 'Skip set';
-  ui.tally.classList.toggle('hidden', resting);
-  if (resting) { ui.n.textContent = Math.ceil(W.t); ui.of.textContent = `sec · ${ex.reps} reps`; }
+  ui.restLabel.textContent = first ? 'Get ready · first up' : ex.restLabel ? `${ex.restLabel} · then` : 'Rest · next up';
+  ui.name.textContent = resting && ex.restLabel && !first ? `${ex.restLabel} ${fmtSec(ex.rest)}` : ex.name;
+  ui.set.textContent = `${ex.id === 'jog' ? 'Round' : 'Set'} ${W.set + 1} of ${ex.sets}`;
+  ui.skipText.textContent = resting ? (ex.restLabel ? `Skip ${ex.restLabel.toLowerCase()}` : 'Skip rest') : 'Skip set';
+  ui.tally.classList.toggle('hidden', resting || ex.hold);
+  if (resting) { ui.n.textContent = Math.ceil(W.t); ui.of.textContent = `sec · then ${ex.name.toLowerCase()} ${ex.hold ? fmtSec(ex.reps) : ex.reps + unit}`; }
+  else if (ex.hold) { const left = ex.reps - W.lastRep; ui.n.textContent = left >= 60 ? `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : left; ui.of.textContent = 'sec left'; }
   else { ui.n.textContent = W.lastRep; ui.of.textContent = `/ ${ex.reps}`; drawTally(W.lastRep, ex.reps); }
   [...ui.plan.children].forEach((el, i) => el.className = i < W.ex ? 'done' : i === W.ex ? 'on' : '');
 }
 
 function nextSet() {
-  const ex = PLAN[W.ex];
+  const ex = W.plan[W.ex];
   if (W.set + 1 < ex.sets) {
-    W.set++; W.phase = 'rest'; W.t = REST_SET;
-    say(`Rest. ${ex.sets - W.set === 1 ? 'Last set' : 'Set ' + (W.set + 1)} coming up.`);
-  } else if (W.ex + 1 < PLAN.length) {
+    W.set++; W.phase = 'rest'; W.t = ex.rest || REST_SET;
+    say(ex.restLabel ? `${ex.restLabel}. ${fmtSec(ex.rest).replace('s', ' seconds')}.` : `Rest. ${ex.sets - W.set === 1 ? 'Last set' : 'Set ' + (W.set + 1)} coming up.`);
+  } else if (W.ex + 1 < W.plan.length) {
     W.ex++; W.set = 0; W.phase = 'rest'; W.t = REST_EX;
-    say(`Rest. Next, ${PLAN[W.ex].say}.`);
+    say(`Rest. Next, ${W.plan[W.ex].say}.`);
   } else return endWorkout(true);
   W.lastSec = Math.ceil(W.t); renderHud();
 }
 
 function tickWorkout(dt) {
   if (W.paused) return;
-  const ex = PLAN[W.ex];
+  const ex = W.plan[W.ex];
   if (W.phase !== 'go') {
     W.t -= dt;
     const sec = Math.ceil(W.t);
     if (sec !== W.lastSec) { W.lastSec = sec; if (sec <= 3 && sec > 0) beep(660); renderHud(); }
-    if (W.t <= 0) { W.phase = 'go'; W.t = 0; W.lastRep = 0; beep(990, 0.18); renderHud(); }
+    if (W.t <= 0) { W.phase = 'go'; W.t = 0; W.lastRep = 0; beep(990, 0.18); if (ex.id === 'jog') say('Run!'); renderHud(); }
     return;
   }
   W.t += dt;
   const rep = Math.floor(W.t / ex.dur);
   if (rep !== W.lastRep) {
-    W.lastRep = rep; beep(rep % 5 === 0 ? 760 : 520, 0.04); renderHud();
+    W.lastRep = rep;
+    if (!ex.hold) beep(rep % 5 === 0 ? 760 : 520, 0.04);
+    else if (ex.reps - rep <= 3 && ex.reps - rep > 0) beep(660);
+    else if (ex.hold && ex.reps - rep === 30 && ex.reps > 45) say('30 seconds left');
+    renderHud();
     if (rep >= ex.reps) nextSet();
   }
 }
 
 const DEBUG = new URLSearchParams(location.search);
 function currentPose(clock) {
-  if (DEBUG.has('move')) { const m = DEBUG.get('move'), d = PLAN.find(x => x.id === m)?.dur || 1, ph = DEBUG.has('s') ? +DEBUG.get('s') : (clock % d) / d;
-    return m === 'idle' ? MOVES.idle(clock) : MOVES[m](ph, +(DEBUG.get('side') || 1)); }
-  if (!W || W.phase !== 'go') return MOVES.idle(clock);
-  const ex = PLAN[W.ex], s = (W.t % ex.dur) / ex.dur, rep = Math.floor(W.t / ex.dur);
-  return MOVES[ex.id](s, rep % 2 ? -1 : 1);
+  if (DEBUG.has('move')) { const m = DEBUG.get('move'), d = EX[m]?.dur || 1, ph = DEBUG.has('s') ? +DEBUG.get('s') : (clock % d) / d;
+    return m === 'idle' ? MOVES.idle(clock) : MOVES[m](ph, +(DEBUG.get('side') || 1), clock); }
+  if (!W) return MOVES.idle(clock);
+  const ex = W.plan[W.ex];
+  // between sets the body holds the start position of what's next, so you can get into it too
+  if (W.phase !== 'go') return ex.id === 'jog' || !EX[ex.id].floor ? MOVES.idle(clock) : MOVES[ex.id](0, 1, clock);
+  const s = (W.t % ex.dur) / ex.dur, rep = Math.floor(W.t / ex.dur);
+  return MOVES[ex.id](s, rep % 2 ? -1 : 1, clock);
 }
 
 $('startBtn').onclick = startWorkout;
@@ -697,12 +885,19 @@ function resize() {
 }
 // where the camera looks: idle leaves room for the headline above, a workout leaves room for the panel below
 let narrow = false, lookY = 0.9;
+let camDist = 5.6;
+const onFloor = () => { const m = DEBUG.get('move') || (W && W.plan[W.ex].id); return !!(m && EX[m]?.floor); };
 function aimCamera(dt) {
-  const want = narrow ? (W ? 0.55 : 1.14) : (W ? 0.75 : 0.92);
+  const fl = onFloor();
+  const want = fl ? (narrow ? 0.05 : 0.3) : narrow ? (W ? 0.55 : 0.98) : (W ? 0.75 : 0.62);
+  const dist = narrow ? (fl ? 6.6 : W ? 5.9 : 7.2) : W ? 5.2 : 6.6;
   lookY += (want - lookY) * Math.min(1, dt * 4);
+  camDist += (dist - camDist) * Math.min(1, dt * 4);
+  camera.position.z = camDist;
   camera.lookAt(0, lookY, 0);
 }
 addEventListener('resize', resize); resize();
+renderWeek();
 
 const clock = new THREE.Clock(); let elapsed = 0;
 renderer.setAnimationLoop(() => {
@@ -710,7 +905,7 @@ renderer.setAnimationLoop(() => {
   if (W) {
     tickWorkout(dt);
     // face the camera at a three-quarter angle while working out
-    const target = 0.45;
+    const target = onFloor() ? 1.35 : 0.45;
     const diff = Math.atan2(Math.sin(target - spin), Math.cos(target - spin));
     if (!dragging) spin += diff * Math.min(1, dt * 3);
   } else if (!dragging) {
