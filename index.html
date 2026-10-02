@@ -54,8 +54,11 @@
   .top { max-width: 420px; }
   .eyebrow { font: 600 12px/1 Archivo, sans-serif; letter-spacing: .14em; text-transform: uppercase; color: var(--sodium); display: flex; gap: 8px; align-items: center; }
   .eyebrow .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--sodium); box-shadow: 0 0 10px var(--sodium); }
-  h1 { font: 900 clamp(38px, 9vw, 64px)/.92 "Big Shoulders Display", sans-serif; text-transform: uppercase; letter-spacing: .005em; margin: 10px 0 8px; }
+  h1 { font: 900 clamp(34px, 8vw, 52px)/.95 "Big Shoulders Display", sans-serif; text-transform: uppercase; letter-spacing: .005em;
+       margin: 10px 0 8px; min-height: 2.85em; display: flex; align-items: flex-end; transition: opacity .5s ease, transform .5s ease; }
+  h1.out { opacity: 0; transform: translateY(6px); }
   h1 em { font-style: normal; color: var(--sodium); }
+  @media (prefers-reduced-motion: reduce) { h1 { transition: none; } }
   .sub { color: var(--muted); max-width: 34ch; }
 
   .strip { margin-top: 14px; display: grid; grid-template-columns: repeat(85, 1fr); gap: 1px; height: 18px; max-width: 340px; }
@@ -117,7 +120,7 @@
 <div class="hud">
   <header class="top" id="intro">
     <div class="eyebrow"><span class="dot"></span><span id="daysLeft">Days to December 25</span></div>
-    <h1>Big belly.<br><em>Six-pack</em> by Christmas.</h1>
+    <h1 id="quote" aria-live="polite"><span>Show up. <em>Every day.</em></span></h1>
     <p class="sub">No gym. A living room, the street outside, and this body doing the workout with me.</p>
     <div class="strip" id="strip" aria-hidden="true"></div>
     <div class="strip-legend"><span>Oct 2</span><span id="logged">0 workouts logged</span><span>Dec 25</span></div>
@@ -200,6 +203,32 @@ function renderStrip() {
   document.getElementById('daysLeft').textContent = `${left} days to December 25`;
 }
 renderStrip();
+
+/* ---------- quotes ---------- */
+const QUOTES = [
+  'Show up. <em>Every day.</em>',
+  'Nobody is coming. <em>Get up.</em>',
+  'One more rep than <em>yesterday.</em>',
+  'No gym? <em>No excuse.</em>',
+  'Tired is a feeling. <em>Done</em> is a decision.',
+  'The street is free. <em>Run it.</em>',
+  'It didn\'t come in a day. It <em>won\'t leave</em> in one.',
+  'Sweat now. <em>Shirt off</em> in December.',
+  'Small steps. <em>Every single day.</em>',
+  'You don\'t need motivation. You need <em>a start.</em>',
+  'Do it <em>tired.</em> Do it anyway.',
+  'Future you is <em>watching.</em>',
+];
+{
+  const el = document.getElementById('quote');
+  let i = Math.floor(Math.random() * QUOTES.length);
+  el.innerHTML = `<span>${QUOTES[i]}</span>`;
+  setInterval(() => {
+    if (document.hidden) return;
+    el.classList.add('out');
+    setTimeout(() => { i = (i + 1) % QUOTES.length; el.innerHTML = `<span>${QUOTES[i]}</span>`; el.classList.remove('out'); }, 500);
+  }, 7000);
+}
 
 /* ---------- scene ---------- */
 const canvas = document.getElementById('stage');
