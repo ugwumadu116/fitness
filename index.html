@@ -605,10 +605,11 @@ loadBody().then(gltf => {
   document.getElementById('loading').textContent = 'Body model missing — add models/joel.glb';
 });
 
-/* ---------- billboards: LED boards around the stage that turn with the body ---------- */
-// Drop your own clips here (e.g. 'media/day-1.mp4') and they play on the boards, muted. Empty = text boards only.
+/* ---------- screens: two framed kiosks, like the arena's, that turn with the body ---------- */
+// Drop your own clips here (e.g. 'media/day-1.mp4') and the second screen plays them, muted. Empty = text only.
 const BOARD_VIDEOS = [];
-const BOARD_KINDS = ['quote', 'level', 'quote', 'food', 'quote', 'days'];
+const SCREEN_KINDS = ['quote', 'quote', 'level', 'food', 'days'];
+const SW = 480, SH = 620;                 // canvas pixels, portrait
 const boards = [];
 function wrapLines(g, text, maxW) {
   const words = text.split(' '), lines = []; let line = '';
@@ -616,80 +617,106 @@ function wrapLines(g, text, maxW) {
   if (line) lines.push(line); return lines;
 }
 function drawBoard(b) {
-  const g = b.ctx, W = 640, H = 400;
-  g.fillStyle = '#0d0d0e'; g.fillRect(0, 0, W, H);
-  // LED dot texture
-  g.fillStyle = 'rgba(255,255,255,.035)';
-  for (let y = 4; y < H; y += 8) for (let x = 4; x < W; x += 8) g.fillRect(x, y, 2, 2);
-  g.fillStyle = '#F5C518'; g.fillRect(0, 0, W, 10);
-  for (let x = 0; x < W; x += 40) { g.fillStyle = '#161616'; g.fillRect(x + 20, 0, 20, 10); }
-  const label = (t) => { g.font = '600 22px Archivo, sans-serif'; g.fillStyle = '#F2A93B'; g.fillText(t.toUpperCase().split('').join(String.fromCharCode(8202)), 36, 58); };
-  const big = (text, size, y0, maxLines = 4) => {
-    // *word* marks the amber words
+  const g = b.ctx, W = SW, H = SH, X = 34;
+  const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#120c07'); bg.addColorStop(1, '#050403');
+  g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  g.fillStyle = 'rgba(255,180,90,.04)';                       // scanlines
+  for (let y = 0; y < H; y += 4) g.fillRect(0, y, W, 1);
+  const label = t => { g.font = '600 20px Archivo, sans-serif'; g.fillStyle = '#F2A93B'; g.fillText(t.toUpperCase().split('').join(String.fromCharCode(8202)), X, 62);
+    g.fillStyle = 'rgba(242,169,59,.5)'; g.fillRect(X, 80, 46, 3); };
+  const big = (text, size, y0, maxLines = 6) => {
     g.font = `900 ${size}px "Big Shoulders Display", sans-serif`;
     const plain = text.replace(/<\/?em>/g, '*').toUpperCase();
-    const lines = wrapLines(g, plain.replace(/\*/g, ''), W - 72).slice(0, maxLines);
+    const lines = wrapLines(g, plain.replace(/\*/g, ''), W - X * 2).slice(0, maxLines);
     let amber = false, idx = 0; const marks = [];
     for (const ch of plain) { if (ch === '*') { amber = !amber; continue; } marks[idx++] = amber; }
     let k = 0;
     lines.forEach((ln, li) => {
-      let x = 36; const y = y0 + li * size * 0.98;
+      let x = X; const y = y0 + li * size * 0.98;
       for (const ch of ln) { g.fillStyle = marks[k] ? '#F2A93B' : '#EDEAE2'; g.fillText(ch, x, y); x += g.measureText(ch).width; k++; }
-      k++; // the space the wrap consumed
+      k++;
     });
   };
-  if (b.kind === 'quote') { label('Motivation'); big(QUOTES[b.q % QUOTES.length], 62, 130); }
-  if (b.kind === 'food') { label('Food rule today'); big(FOOD_TODAY, 54, 128); }
+  if (b.kind === 'quote') { label('Motivation'); big(QUOTES[b.q % QUOTES.length], 70, 168); }
+  if (b.kind === 'food') { label('Food rule today'); big(FOOD_TODAY, 60, 164); }
   if (b.kind === 'level') {
     const done = new Set(readLog()).size, i = levelFor(done), next = LEVELS[i + 1];
-    label(`Level ${i + 1} of ${LEVELS.length}`); big(LEVELS[i].name, 96, 160, 1);
-    g.font = '500 26px Archivo, sans-serif'; g.fillStyle = '#A9A69E';
-    g.fillText(next ? `${next.at - done} workouts to ${next.name}` : 'Top level. Keep it.', 36, 230);
-    g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(36, 270, W - 72, 18);
-    g.fillStyle = '#F5C518'; g.fillRect(36, 270, (W - 72) * (next ? (done - LEVELS[i].at) / (next.at - LEVELS[i].at) : 1), 18);
+    label(`Level ${i + 1} of ${LEVELS.length}`); big(LEVELS[i].name, 104, 210, 2);
+    g.font = '500 24px Archivo, sans-serif'; g.fillStyle = '#A9A69E';
+    g.fillText(next ? `${next.at - done} workouts to ${next.name}` : 'Top level. Keep it.', X, 440);
+    g.fillStyle = 'rgba(255,255,255,.1)'; g.fillRect(X, 470, W - X * 2, 16);
+    g.fillStyle = '#F5C518'; g.fillRect(X, 470, (W - X * 2) * (next ? (done - LEVELS[i].at) / (next.at - LEVELS[i].at) : 1), 16);
   }
   if (b.kind === 'days') {
     const now = new Date(); now.setHours(0, 0, 0, 0); const left = Math.max(0, Math.round((END - now) / 864e5));
-    label('Countdown'); g.font = '900 170px "Big Shoulders Display", sans-serif'; g.fillStyle = '#F2A93B'; g.fillText(String(left), 36, 250);
-    g.font = '700 46px "Big Shoulders Display", sans-serif'; g.fillStyle = '#EDEAE2'; g.fillText('DAYS TO DECEMBER 25', 36, 320);
+    label('Countdown'); g.font = '900 250px "Big Shoulders Display", sans-serif'; g.fillStyle = '#F2A93B'; g.fillText(String(left), X - 6, 360);
+    g.font = '800 56px "Big Shoulders Display", sans-serif'; g.fillStyle = '#EDEAE2'; g.fillText('DAYS TO', X, 450); g.fillText('DECEMBER 25', X, 505);
   }
   b.tex.needsUpdate = true;
 }
+// rectangle with cut corners, the arena's frame shape
+function chamfer(w, h, c) {
+  const x = w / 2, y = h / 2;
+  return [[-x + c, -y], [x - c, -y], [x, -y + c], [x, y - c], [x - c, y], [-x + c, y], [-x, y - c], [-x, -y + c]].map(([a, b]) => new THREE.Vector2(a, b));
+}
+function glowLoop(pts, z, mat) {
+  const g = new THREE.BufferGeometry().setFromPoints([...pts, pts[0]].map(p => new THREE.Vector3(p.x, p.y, z)));
+  return new THREE.Line(g, mat);
+}
 function buildBoards() {
-  const R = 2.9, n = BOARD_KINDS.length;
-  BOARD_KINDS.forEach((kind, i) => {
-    const grp = new THREE.Group(), a = (i / n) * Math.PI * 2 + Math.PI / n;
-    grp.position.set(Math.sin(a) * R, 0, Math.cos(a) * R);
-    grp.lookAt(0, 0, 0);
-    const c = document.createElement('canvas'); c.width = 640; c.height = 400;
-    // with clips, two of the quote boards turn into video boards
-    let tex; const video = BOARD_VIDEOS.length && kind === 'quote' && i > 0 ? BOARD_VIDEOS[(i >> 1) % BOARD_VIDEOS.length] : null;
+  const R = 2.75, w = 1.0, h = w * SH / SW, cy = 0.62 + h / 2;
+  [[-0.95, 0], [Math.PI - 0.95, 1]].forEach(([a, i]) => {
+    const grp = new THREE.Group();
+    grp.position.set(Math.sin(a) * R, 0, Math.cos(a) * R); grp.lookAt(0, 0, 0);
+    const c = document.createElement('canvas'); c.width = SW; c.height = SH;
+    const video = i === 1 && BOARD_VIDEOS.length ? BOARD_VIDEOS[0] : null;
+    let tex;
     if (video) {
       const v = Object.assign(document.createElement('video'), { src: video, muted: true, loop: true, playsInline: true, autoplay: true, crossOrigin: 'anonymous' });
       v.play().catch(() => {}); tex = new THREE.VideoTexture(v);
     } else tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
     const screenMat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, toneMapped: false });
-    const screen = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.0), screenMat);
-    screen.position.y = 1.75;
-    const frameMat = new THREE.MeshStandardMaterial({ color: 0x1b1b1c, roughness: .6, transparent: true });
-    const frame = new THREE.Mesh(new THREE.BoxGeometry(1.7, 1.1, 0.06), frameMat); frame.position.set(0, 1.75, -0.04);
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.25, 8), frameMat); pole.position.set(0, 0.62, -0.06);
+    const screen = new THREE.Mesh(new THREE.PlaneGeometry(w, h), screenMat); screen.position.set(0, cy, 0.031);
+    // bezel: chamfered slab with the screen cut out
+    const outer = chamfer(w + 0.26, h + 0.26, 0.16);
+    const bezelShape = new THREE.Shape(outer);
+    bezelShape.holes.push(new THREE.Path(chamfer(w + 0.02, h + 0.02, 0.0001)));
+    const bezelMat = new THREE.MeshStandardMaterial({ color: 0x0d0907, roughness: .35, metalness: .6, transparent: true });
+    const bezel = new THREE.Mesh(new THREE.ExtrudeGeometry(bezelShape, { depth: 0.06, bevelEnabled: false }), bezelMat);
+    bezel.position.set(0, cy, -0.03);
+    const back = new THREE.Mesh(new THREE.ShapeGeometry(new THREE.Shape(outer)), bezelMat); back.position.set(0, cy, -0.031); back.rotation.y = Math.PI;
+    // two glowing outlines: the frame edge and a halo just outside it
     const edgeMat = new THREE.LineBasicMaterial({ color: GLOW, toneMapped: false, transparent: true });
-    const edges = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1.78, 1.18, 0.07)), edgeMat); edges.position.copy(frame.position);
-    grp.add(frame, edges, screen, pole); turntable.add(grp);
-    const b = { grp, kind: video ? 'video' : kind, ctx: c.getContext('2d'), tex, mats: [screenMat, frameMat, edgeMat], q: Math.floor(Math.random() * 99) + i * 7 };
+    const haloMat = new THREE.LineBasicMaterial({ color: AMBER, toneMapped: false, transparent: true, opacity: .55 });
+    const e1 = glowLoop(outer, 0.032, edgeMat), e2 = glowLoop(chamfer(w + 0.4, h + 0.4, 0.22), 0.0, haloMat), e3 = glowLoop(chamfer(w + 0.03, h + 0.03, 0.0001), 0.033, edgeMat);
+    [e1, e2, e3].forEach(l => l.position.y = cy);
+    // low stand like a monitor foot
+    const standMat = new THREE.MeshStandardMaterial({ color: 0x0d0907, roughness: .4, metalness: .6, transparent: true });
+    const neck = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.5, 0.06), standMat); neck.position.set(0, 0.3, -0.02);
+    const foot = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.05, 0.32), standMat); foot.position.set(0, 0.025, 0);
+    const footGlow = new THREE.Mesh(new THREE.PlaneGeometry(0.86, 0.012), new THREE.MeshBasicMaterial({ color: GLOW, toneMapped: false, transparent: true }));
+    footGlow.position.set(0, 0.052, 0.161);
+    grp.add(back, bezel, screen, e1, e2, e3, neck, foot, footGlow); turntable.add(grp);
+    const b = { grp, kind: video ? 'video' : (i ? 'level' : 'quote'), ctx: c.getContext('2d'), tex,
+                mats: [screenMat, bezelMat, edgeMat, haloMat, standMat, footGlow.material], q: Math.floor(Math.random() * QUOTES.length) };
     boards.push(b); if (!video) drawBoard(b);
   });
-  // new quotes on the quote boards every few seconds
-  setInterval(() => boards.forEach(b => { if (b.kind === 'quote') { b.q++; drawBoard(b); } }), 9000);
+  // each screen picks something new at random every few seconds
+  setInterval(() => boards.forEach((b, i) => {
+    if (b.kind === 'video') return;
+    setTimeout(() => {
+      let k; do k = SCREEN_KINDS[Math.floor(Math.random() * SCREEN_KINDS.length)]; while (k === b.kind && k !== 'quote');
+      b.kind = k; b.q = Math.floor(Math.random() * QUOTES.length); drawBoard(b);
+    }, i * 4000);
+  }), 8000);
 }
 const _bp = new THREE.Vector3();
 function fadeBoards() {
   for (const b of boards) {
     b.grp.getWorldPosition(_bp);
     // boards swinging round to the camera's side fade away so they never block the body
-    const o = THREE.MathUtils.clamp((1.2 - _bp.z) / 1.6, 0, 1);
+    const o = THREE.MathUtils.clamp((1.5 - _bp.z) / 1.4, 0, 1);
     b.mats.forEach(m => { m.opacity = o; }); b.grp.visible = o > 0.01;
   }
   for (const p of pillars) {
