@@ -137,8 +137,11 @@
            border-radius: 8px; padding: 10px 14px; backdrop-filter: blur(10px); text-align: center; }
   .start-row { display: flex; gap: 8px; align-items: center; }
   .music-btn.on { color: var(--btn-ink); background: var(--sodium); border-color: var(--sodium); }
-  .start-row .music-btn { min-height: 56px; min-width: 56px; background: var(--panel); backdrop-filter: blur(6px); }
+  .start-row .fs-btn, .start-row .music-btn { min-height: 56px; min-width: 56px; }
+  .start-row .music-btn { background: var(--panel); backdrop-filter: blur(6px); }
   .start-row .music-btn.on { background: var(--sodium); }
+  .start-row .fs-btn { background: var(--panel); backdrop-filter: blur(6px); }
+  .no-fs .fs-btn { display: none; }
   .sheet { position: fixed; left: 50%; bottom: 0; transform: translateX(-50%); width: min(460px, 100%); z-index: 6; background: var(--asphalt);
            border: 1px solid var(--line); border-bottom: 0; border-radius: 14px 14px 0 0; padding: 14px 16px max(16px, env(safe-area-inset-bottom));
            box-shadow: 0 -20px 50px rgba(0,0,0,.45); transition: transform .3s ease; }
@@ -210,7 +213,7 @@
         <div class="lvl-bar"><div id="lvlFill"></div></div>
       </div>
       <div class="week" id="week" role="group" aria-label="Pick a day"></div>
-      <div class="start-row"><button class="btn" id="startBtn">Start workout</button><button class="icon-btn music-btn" id="musicBtn" aria-label="Workout music"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></button></div>
+      <div class="start-row"><button class="btn" id="startBtn">Start workout</button><button class="icon-btn fs-btn" aria-label="Enter full screen"><svg class="fs-on" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg><svg class="fs-off hidden" viewBox="0 0 24 24"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg></button><button class="icon-btn music-btn" id="musicBtn" aria-label="Workout music"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></button></div>
       <div class="meta" id="meta">5 moves · 3 sets each · about 14 min</div>
     </div>
 
@@ -239,6 +242,7 @@
           <svg id="soundOff" class="hidden" viewBox="0 0 24 24"><path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/><line x1="22" x2="16" y1="9" y2="15"/><line x1="16" x2="22" y1="9" y2="15"/></svg>
         </button>
         <button class="icon-btn music-btn" id="musicBtn2" aria-label="Workout music"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></button>
+        <button class="icon-btn fs-btn" aria-label="Enter full screen"><svg class="fs-on" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg><svg class="fs-off hidden" viewBox="0 0 24 24"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg></button>
         <button class="icon-btn" id="stopBtn" aria-label="End workout">
           <svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
         </button>
@@ -1392,6 +1396,25 @@ function syncDemo() {
 }
 $('demoHide').onclick = () => { demoOn = false; try { localStorage.setItem('fit-demo', 'off'); } catch {} $('demoFrame').src = 'about:blank'; demoId = null; syncDemo(); };
 $('demoShow').onclick = () => { demoOn = true; try { localStorage.setItem('fit-demo', 'on'); } catch {} syncDemo(); };
+
+/* ---------- full screen ---------- */
+const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
+if (!(document.fullscreenEnabled || document.webkitFullscreenEnabled)) document.documentElement.classList.add('no-fs'); // iPhone Safari has no full screen for pages
+function toggleFullscreen() {
+  const d = document.documentElement;
+  if (fsEl()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  else (d.requestFullscreen || d.webkitRequestFullscreen).call(d)?.catch?.(() => {});
+}
+function syncFs() {
+  const on = !!fsEl();
+  document.querySelectorAll('.fs-btn').forEach(b => {
+    b.querySelector('.fs-on').classList.toggle('hidden', on); b.querySelector('.fs-off').classList.toggle('hidden', !on);
+    b.setAttribute('aria-label', on ? 'Exit full screen' : 'Enter full screen');
+  });
+}
+document.querySelectorAll('.fs-btn').forEach(b => b.onclick = toggleFullscreen);
+document.addEventListener('fullscreenchange', syncFs); document.addEventListener('webkitfullscreenchange', syncFs);
+addEventListener('keydown', e => { if ((e.key === 'f' || e.key === 'F') && !e.metaKey && !e.ctrlKey && e.target === document.body) toggleFullscreen(); });
 
 /* ---------- confetti: kerb paint flying ---------- */
 function confetti(n) {
