@@ -1276,7 +1276,7 @@ function endWorkout(finished) {
       confetti(160);
     } else {
       ui.toast.textContent = (next ? `Done. Workout ${n} logged. ${next.at - n} more to level ${after + 2}.` : `Done. Workout ${n} logged. Six-pack mode.`) + upNext;
-      say('Workout done. Well done Joel.');
+      say('Workout done. Well done.');
       confetti(60);
     }
     ui.toast.classList.remove('hidden');
