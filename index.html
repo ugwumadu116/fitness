@@ -324,7 +324,7 @@ const LEVELS = [
 const REST_SET = 30, REST_EX = 45, GET_READY = 5;
 
 function levelFor(done) { let i = 0; LEVELS.forEach((l, j) => { if (done >= l.at) i = j; }); return i; }
-function currentLevel() { return levelFor(new Set(readLog()).size); }
+function currentLevel() { return levelFor(workoutsDone()); }
 function buildWorkout(type, lvl = currentLevel()) {
   const L = LEVELS[lvl];
   if (type === 'run') {
@@ -349,8 +349,11 @@ const MODELS = ['models/joel.glb', 'models/xbot.glb'];
 const dayKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 function readLog() { try { return JSON.parse(localStorage.getItem('fit-log') || '[]'); } catch { return []; } }
 function writeLog(log) { try { localStorage.setItem('fit-log', JSON.stringify(log)); } catch {} }
+// each entry is "YYYY-MM-DD|workout" (older ones are just a date); a workout counts once per day
+const workoutsDone = () => new Set(readLog()).size;
+const daysTrained = () => new Set(readLog().map(k => k.split('|')[0]));
 function renderStrip() {
-  const log = new Set(readLog()), today = dayKey(new Date());
+  const log = daysTrained(), today = dayKey(new Date());
   const strip = document.getElementById('strip'); strip.innerHTML = '';
   for (let i = 0; i < 85; i++) {
     const d = new Date(START); d.setDate(d.getDate() + i);
@@ -359,7 +362,7 @@ function renderStrip() {
     if (k === today) el.classList.add('today');
     strip.appendChild(el);
   }
-  const n = log.size;
+  const n = workoutsDone();
   document.getElementById('logged').textContent = `${n} workout${n === 1 ? '' : 's'} logged`;
   const now = new Date(); now.setHours(0, 0, 0, 0);
   const left = Math.max(0, Math.round((END - now) / 864e5));
@@ -660,7 +663,7 @@ function drawBoard(b) {
   if (b.kind === 'quote') { label('Motivation'); big(QUOTES[b.q % QUOTES.length], 70, 168); }
   if (b.kind === 'food') { label('Food rule today'); big(FOOD_TODAY, 60, 164); }
   if (b.kind === 'level') {
-    const done = new Set(readLog()).size, i = levelFor(done), next = LEVELS[i + 1];
+    const done = workoutsDone(), i = levelFor(done), next = LEVELS[i + 1];
     label(`Level ${i + 1} of ${LEVELS.length}`); big(LEVELS[i].name, 104, 210, 2);
     g.font = '500 24px Archivo, sans-serif'; g.fillStyle = '#A9A69E';
     g.fillText(next ? `${next.at - done} workouts to ${next.name}` : 'Top level. Keep it.', X, 440);
@@ -1116,7 +1119,7 @@ function dateForWeekday(wd) {          // this week's date for a weekday, Monday
   d.setDate(d.getDate() + off); return d;
 }
 function renderWeek() {
-  const wk = document.getElementById('week'), log = new Set(readLog()), today = new Date().getDay();
+  const wk = document.getElementById('week'), log = readLog(), today = new Date().getDay(), monday = dayKey(dateForWeekday(1));
   wk.innerHTML = '';
   [1, 2, 3, 4, 5, 6, 0].forEach(wd => {
     const b = document.createElement('button'), type = SCHEDULE[wd];
@@ -1124,7 +1127,7 @@ function renderWeek() {
     b.setAttribute('aria-pressed', wd === selDay);
     b.setAttribute('aria-label', `${DAY_NAMES[wd]}: ${WORKOUTS[type].name}`);
     if (wd === today) b.classList.add('today');
-    if (log.has(dayKey(dateForWeekday(wd)))) b.classList.add('done');
+    if (log.some(k => { const [d, t] = k.split('|'); return d >= monday && (t ? t === type : d === dayKey(dateForWeekday(wd))); })) b.classList.add('done');
     b.onclick = () => { selDay = wd; renderWeek(); };
     wk.appendChild(b);
   });
@@ -1137,7 +1140,7 @@ function renderWeek() {
   renderLevel();
 }
 function renderLevel() {
-  const done = new Set(readLog()).size, i = levelFor(done), L = LEVELS[i], next = LEVELS[i + 1];
+  const done = workoutsDone(), i = levelFor(done), L = LEVELS[i], next = LEVELS[i + 1];
   document.getElementById('lvlName').textContent = `Level ${i + 1} · ${L.name}`;
   document.getElementById('lvlNext').textContent = next ? `${next.at - done} to level ${i + 2}` : 'Max level';
   const pct = next ? (done - L.at) / (next.at - L.at) : 1;
@@ -1259,16 +1262,20 @@ function startWorkout() {
 
 function endWorkout(finished) {
   if (finished) {
-    const before = currentLevel();
-    const log = new Set(readLog()); log.add(dayKey(new Date())); writeLog([...log]);
+    const before = currentLevel(), doneType = SCHEDULE[selDay];
+    const log = new Set(readLog()); log.add(`${dayKey(new Date())}|${doneType}`); writeLog([...log]);
+    // line up the next day's workout so you can keep going
+    const order = [1, 2, 3, 4, 5, 6, 0];
+    selDay = order[(order.indexOf(selDay) + 1) % 7];
     renderStrip(); renderWeek(); boards.forEach(b => b.kind !== 'video' && drawBoard(b));
     const n = log.size, after = levelFor(n), next = LEVELS[after + 1];
+    const upNext = ` Next up: ${WORKOUTS[SCHEDULE[selDay]].name.toLowerCase()}.`;
     if (after > before) {
-      ui.toast.textContent = `Level up! Level ${after + 1}: ${LEVELS[after].name}. Workouts just got harder.`;
+      ui.toast.textContent = `Level up! Level ${after + 1}: ${LEVELS[after].name}. Workouts just got harder.${upNext}`;
       say(`Level up! Level ${after + 1}. ${LEVELS[after].name}.`);
       confetti(160);
     } else {
-      ui.toast.textContent = next ? `Done. Workout ${n} logged. ${next.at - n} more to level ${after + 2}.` : `Done. Workout ${n} logged. Six-pack mode.`;
+      ui.toast.textContent = (next ? `Done. Workout ${n} logged. ${next.at - n} more to level ${after + 2}.` : `Done. Workout ${n} logged. Six-pack mode.`) + upNext;
       say('Workout done. Well done Joel.');
       confetti(60);
     }
