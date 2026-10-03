@@ -625,9 +625,9 @@ loadBody().then(gltf => {
 });
 
 /* ---------- screens: two framed kiosks, like the arena's, that turn with the body ---------- */
-// The second screen plays these in turn, muted. Free stock clips from Mixkit for now — swap in your own
-// training clips (portrait-ish, a few seconds each) as you record them.
-const BOARD_VIDEOS = ['media/home-lunges.mp4', 'media/street-run.mp4', 'media/jump-rope.mp4', 'media/lunges.mp4', 'media/jog.mp4', 'media/stretch.mp4'];
+// Add your own training clips here (e.g. 'media/day-1.mp4', portrait-ish, a few seconds each) and one
+// wall screen plays them in turn, muted. Empty = all four screens show text.
+const BOARD_VIDEOS = [];
 const SCREEN_KINDS = ['quote', 'quote', 'level', 'food', 'days'];
 const SW = 480, SH = 620;                 // canvas pixels, portrait
 const boards = [];
