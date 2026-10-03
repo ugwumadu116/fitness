@@ -129,7 +129,8 @@
                       color: var(--ink); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
                       font: 600 14px/1 Archivo, sans-serif; padding: 0 12px; }
   .icon-btn:active, .ghost:active { transform: scale(.97); }
-  .ghost { flex: 1; }
+  .ghost { flex: 1; white-space: nowrap; }
+  @media (max-width: 400px) { #skipBtn svg { display: none; } .controls { gap: 6px; } }
   .icon-btn svg, .ghost svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .hidden { display: none !important; }
   .toast { font: 600 14px/1.3 Archivo, sans-serif; color: var(--ink); background: var(--panel); border: 1px solid var(--line);
@@ -154,6 +155,18 @@
   .yt { margin-top: 10px; aspect-ratio: 16 / 9; border-radius: 8px; overflow: hidden; background: #000; }
   .yt iframe, .yt > div { width: 100%; height: 100%; display: block; }
   .sheet-note { margin-top: 8px; font-size: 12px; color: var(--muted); }
+  .demo { position: fixed; top: max(16px, env(safe-area-inset-top)); right: 16px; width: min(340px, 52vw); z-index: 4;
+          background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; backdrop-filter: blur(8px);
+          box-shadow: 0 0 0 1px rgba(255,166,61,.25), 0 0 24px rgba(255,166,61,.18); }
+  .demo-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 6px 6px 10px; }
+  #demoLabel { font: 600 11px/1.2 Archivo, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--sodium);
+               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .demo-x, .demo-show { min-height: 32px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--ink);
+                        font: 600 12px/1 Archivo, sans-serif; cursor: pointer; }
+  .demo-show { position: fixed; top: max(16px, env(safe-area-inset-top)); right: 16px; z-index: 4; min-height: 44px; background: var(--panel); backdrop-filter: blur(8px); }
+  .demo-x:focus-visible, .demo-show:focus-visible { outline: 2px solid var(--sodium); outline-offset: 2px; }
+  .demo-frame { aspect-ratio: 16 / 9; background: #000; }
+  .demo-frame iframe { width: 100%; height: 100%; border: 0; display: block; pointer-events: none; }
   #confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
   .loading { position: fixed; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 13px; letter-spacing: .1em; text-transform: uppercase; pointer-events: none; }
   @media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
@@ -176,17 +189,16 @@
   <div class="yt"><div id="ytPlayer"></div></div>
   <p class="sheet-note">The voice coach turns the music down when it talks.</p>
 </section>
+<aside class="demo hidden" id="demo" aria-label="Exercise demo">
+  <div class="demo-head"><span id="demoLabel">How to</span><button class="demo-x" id="demoHide" aria-label="Hide demo videos">Hide</button></div>
+  <div class="demo-frame"><iframe id="demoFrame" title="Exercise demo" allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
+</aside>
+<button class="demo-show hidden" id="demoShow">Show demo</button>
 <div class="hud">
   <header class="top" id="intro">
     <div class="eyebrow"><span class="dot"></span><span id="daysLeft">Days to December 25</span></div>
-    <h1 id="quote" aria-live="polite"><span>Show up. <em>Every day.</em></span></h1>
-    <p class="sub">No gym. A living room, the street outside, and this body doing the workout with me.</p>
     <div class="strip" id="strip" aria-hidden="true"></div>
     <div class="strip-legend"><span>Oct 2</span><span id="logged">0 workouts logged</span><span>Dec 25</span></div>
-    <div class="food">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>
-      <div><span class="food-label">Food rule today</span><span id="foodRule">No soft drinks. Water only.</span></div>
-    </div>
   </header>
 
   <footer class="bottom">
@@ -356,6 +368,7 @@ function renderStrip() {
 renderStrip();
 
 /* ---------- food rule: one per day, same all day ---------- */
+let FOOD_TODAY = '';
 const FOOD_RULES = [
   'No soft drinks today. Water only.',
   'Half the rice you normally eat. Double the vegetables.',
@@ -382,7 +395,7 @@ const FOOD_RULES = [
 {
   const now = new Date(); now.setHours(0, 0, 0, 0);
   const n = Math.max(0, Math.round((now - START) / 864e5));
-  document.getElementById('foodRule').textContent = FOOD_RULES[n % FOOD_RULES.length];
+  FOOD_TODAY = FOOD_RULES[n % FOOD_RULES.length];
 }
 
 /* ---------- quotes ---------- */
@@ -414,16 +427,6 @@ const QUOTES = [
   'Sleep early. <em>Train early.</em>',
   'Don\'t break the <em>chain.</em>',
 ];
-{
-  const el = document.getElementById('quote');
-  let i = Math.floor(Math.random() * QUOTES.length);
-  el.innerHTML = `<span>${QUOTES[i]}</span>`;
-  setInterval(() => {
-    if (document.hidden) return;
-    el.classList.add('out');
-    setTimeout(() => { i = (i + 1) % QUOTES.length; el.innerHTML = `<span>${QUOTES[i]}</span>`; el.classList.remove('out'); }, 500);
-  }, 7000);
-}
 
 /* ---------- scene ---------- */
 const canvas = document.getElementById('stage');
@@ -436,78 +439,115 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
-const dark = matchMedia('(prefers-color-scheme: dark)');
 
-const hemi = new THREE.HemisphereLight(0x8fa3c0, 0x1a1712, 0.5);
-scene.add(hemi);
-const lamp = new THREE.SpotLight(0xffb45a, 60, 14, 0.52, 0.55, 1.4);
-lamp.position.set(0.4, 5.2, 0.9);
-lamp.castShadow = true;
-lamp.shadow.mapSize.set(1024, 1024);
-lamp.shadow.bias = -0.0004;
+/* ---------- arena: a sodium-lit stage that turns with the body ---------- */
+const turntable = new THREE.Group(); scene.add(turntable);
+const AMBER = new THREE.Color(0xffa63d), GLOW = new THREE.Color(0xff9a30).multiplyScalar(2.4), KERB = 0xf5c518;
+const PLAT_H = 0.14;          // the body stands on the platform, not the floor
+
+scene.background = new THREE.Color(0x0a0705);
+scene.fog = new THREE.Fog(0x060403, 8, 24);
+renderer.toneMappingExposure = 0.9;
+const hemi = new THREE.HemisphereLight(0xffc89a, 0x140a04, 0.18); scene.add(hemi);
+const lamp = new THREE.SpotLight(0xffd2a0, 38, 16, 0.42, 0.7, 1.3);
+lamp.position.set(0.6, 5.6, 2.2); lamp.castShadow = true; lamp.shadow.mapSize.set(1024, 1024); lamp.shadow.bias = -0.0004;
 scene.add(lamp, lamp.target);
-const rim = new THREE.DirectionalLight(0x9fb7ff, 0.6);
-rim.position.set(-3, 3, -4);
-scene.add(rim);
+const rim = new THREE.DirectionalLight(0xff8a2a, 1.1); rim.position.set(-2, 3, -4); scene.add(rim);
+const rim2 = new THREE.DirectionalLight(0xffb060, 0.5); rim2.position.set(3, 2, -3); scene.add(rim2);
 
-// asphalt with grain
-function grainTexture(base, speck) {
-  const c = document.createElement('canvas'); c.width = c.height = 512;
-  const g = c.getContext('2d'); g.fillStyle = base; g.fillRect(0, 0, 512, 512);
-  for (let i = 0; i < 14000; i++) {
-    g.fillStyle = Math.random() < .5 ? speck : 'rgba(0,0,0,.25)';
-    g.globalAlpha = Math.random() * .5;
-    g.fillRect(Math.random() * 512, Math.random() * 512, 1.5, 1.5);
+// back wall: a dome whose horizon glows sodium-amber
+const dome = new THREE.Mesh(new THREE.SphereGeometry(40, 48, 24), new THREE.ShaderMaterial({
+  side: THREE.BackSide, depthWrite: false, fog: false,
+  vertexShader: `varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.); }`,
+  fragmentShader: `varying vec3 vP; void main(){ float h = normalize(vP).y;
+    vec3 floorC = vec3(.012,.008,.005), horizon = vec3(.11,.04,.012), top = vec3(.02,.009,.005);
+    vec3 c = h < 0. ? mix(horizon*.35, floorC, clamp(-h*6.,0.,1.)) : mix(horizon, top, clamp(h*2.2,0.,1.));
+    gl_FragColor = vec4(c, 1.); }`,
+}));
+scene.add(dome);
+
+// floor + grid
+const floor = new THREE.Mesh(new THREE.CircleGeometry(30, 64), new THREE.MeshStandardMaterial({ color: 0x070504, roughness: .7, metalness: .2 }));
+floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; turntable.add(floor);
+const grid = new THREE.GridHelper(40, 64, AMBER, AMBER);
+grid.material.transparent = true; grid.material.opacity = 0.14; grid.position.y = 0.002; turntable.add(grid);
+
+// glowing strips are thin quads in HDR amber so the bloom pass catches them
+const glowMat = new THREE.MeshBasicMaterial({ color: GLOW, toneMapped: false, transparent: true });
+const softMat = new THREE.MeshBasicMaterial({ color: AMBER, transparent: true, opacity: .08, toneMapped: false, depthWrite: false });
+function strip(a, b, w = 0.025, y = 0.004, parent = turntable) {
+  const d = b.clone().sub(a), len = d.length(), mid = a.clone().add(b).multiplyScalar(.5);
+  for (const [m, ww] of [[glowMat, w], [softMat, w * 6]]) {
+    const q = new THREE.Mesh(new THREE.PlaneGeometry(len, ww), m);
+    q.rotation.x = -Math.PI / 2; q.rotation.z = -Math.atan2(d.z, d.x); q.position.set(mid.x, y, mid.z); parent.add(q);
   }
-  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(8, 8);
-  t.colorSpace = THREE.SRGBColorSpace; return t;
 }
-const ground = new THREE.Mesh(new THREE.CircleGeometry(30, 64), new THREE.MeshStandardMaterial({ roughness: .95 }));
-ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
-
-// signature: painted kerb ring the body stands on
-const kerb = new THREE.Group();
-for (let i = 0; i < 28; i++) {
-  const seg = new THREE.Mesh(
-    new THREE.RingGeometry(0.86, 1.02, 6, 1, (i / 28) * Math.PI * 2, (Math.PI * 2) / 28 * 0.98),
-    new THREE.MeshStandardMaterial({ color: i % 2 ? 0x161616 : 0xf5c518, roughness: .7 })
-  );
-  seg.rotation.x = -Math.PI / 2; seg.position.y = 0.003; seg.receiveShadow = true; kerb.add(seg);
+// floor circuit lines: seeded so the arena is the same every visit
+let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+for (let k = 0; k < 14; k++) {
+  let ang = rnd() * Math.PI * 2, rad = 1.9 + rnd() * 6;
+  let p = new THREE.Vector3(Math.cos(ang) * rad, 0, Math.sin(ang) * rad);
+  for (let j = 0; j < 3; j++) {
+    ang += (rnd() - .5) * 1.2; rad += (rnd() - .3) * 3;
+    const q = new THREE.Vector3(Math.cos(ang) * Math.max(1.9, rad), 0, Math.sin(ang) * Math.max(1.9, rad));
+    strip(p, q, 0.022); p = q;
+  }
 }
-const pad = new THREE.Mesh(new THREE.CircleGeometry(0.86, 64), new THREE.MeshStandardMaterial({ roughness: .9 }));
-pad.rotation.x = -Math.PI / 2; pad.position.y = 0.002; pad.receiveShadow = true; kerb.add(pad);
-scene.add(kerb);
 
-// streetlight cone
-const coneMat = new THREE.ShaderMaterial({
-  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
-  uniforms: { col: { value: new THREE.Color(0xffa94a) }, strength: { value: .16 } },
-  vertexShader: `varying float vY; void main(){ vY = uv.y; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.); }`,
-  fragmentShader: `uniform vec3 col; uniform float strength; varying float vY; void main(){ gl_FragColor = vec4(col, pow(vY, 1.6) * strength); }`,
+// hexagon platform with a kerb-striped rim: the one piece of the old street that stays
+const plat = new THREE.Mesh(new THREE.CylinderGeometry(1.18, 1.3, PLAT_H, 6), new THREE.MeshStandardMaterial({ color: 0x15100c, roughness: .35, metalness: .5 }));
+plat.position.y = PLAT_H / 2; plat.receiveShadow = true; plat.castShadow = true; turntable.add(plat);
+const platEdges = new THREE.LineSegments(new THREE.EdgesGeometry(plat.geometry), new THREE.LineBasicMaterial({ color: GLOW, toneMapped: false }));
+platEdges.position.copy(plat.position); turntable.add(platEdges);
+for (let i = 0; i < 6; i++) {        // glow on the top rim
+  const a0 = i / 6 * Math.PI * 2, a1 = (i + 1) / 6 * Math.PI * 2, R = 1.18;
+  strip(new THREE.Vector3(Math.sin(a0) * R, 0, Math.cos(a0) * R), new THREE.Vector3(Math.sin(a1) * R, 0, Math.cos(a1) * R), 0.03, PLAT_H + 0.003);
+}
+for (let i = 0; i < 24; i++) {
+  const seg = new THREE.Mesh(new THREE.RingGeometry(0.84, 0.96, 6, 1, (i / 24) * Math.PI * 2, (Math.PI * 2) / 24 * 0.96),
+    new THREE.MeshStandardMaterial({ color: i % 2 ? 0x0e0e0e : 0xc99a10, roughness: .8 }));
+  seg.rotation.x = -Math.PI / 2; seg.position.y = PLAT_H + 0.002; seg.receiveShadow = true; turntable.add(seg);
+}
+
+// chevron pillars: bent monoliths with lit edges
+const pillars = [];
+const pShape = new THREE.Shape([[0, 0], [0.42, 0], [0.42, 2.5], [1.15, 3.7], [0.8, 3.9], [0, 2.62]].map(([x, y]) => new THREE.Vector2(x, y)));
+const pGeo = new THREE.ExtrudeGeometry(pShape, { depth: 0.36, bevelEnabled: false });
+pGeo.translate(-0.21, 0, -0.18);
+const pEdgeGeo = new THREE.EdgesGeometry(pGeo);
+[[0.35, 4.6, 1], [0.75, 5.4, -1], [1.6, 4.3, 1], [2.3, 5.8, -1], [2.95, 4.8, 1], [3.6, 5.2, -1], [4.3, 4.5, 1], [5.0, 5.6, -1], [5.7, 4.9, 1]].forEach(([a, R, flip]) => {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: 0x0f0b08, roughness: .3, metalness: .6, transparent: true });
+  const edgeMat = new THREE.LineBasicMaterial({ color: GLOW, toneMapped: false, transparent: true });
+  const body = new THREE.Mesh(pGeo, mat); body.castShadow = true;
+  const edges = new THREE.LineSegments(pEdgeGeo, edgeMat);
+  g.add(body, edges); g.scale.set(flip, 1, 1);
+  g.position.set(Math.sin(a) * R, 0, Math.cos(a) * R); g.lookAt(0, 0, 0); g.rotateY(Math.PI / 2 * flip * 0.3);
+  turntable.add(g); pillars.push({ g, mats: [mat, edgeMat] });
 });
-const cone = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 1.5, 5.2, 48, 1, true), coneMat);
-cone.position.set(0.25, 2.6, 0.55); cone.rotation.z = -0.04; scene.add(cone);
 
-function applyTheme() {
-  const d = dark.matches;
-  const bg = new THREE.Color(d ? 0x121314 : 0xc6cacd);
-  scene.background = bg;
-  scene.fog = new THREE.Fog(bg, d ? 5 : 6, d ? 13 : 16);
-  ground.material.map = grainTexture(d ? '#1d1e20' : '#9a9893', d ? '#3a3b3d' : '#c2c0ba');
-  ground.material.color.set(0xffffff); ground.material.needsUpdate = true;
-  pad.material.color.set(d ? 0x2a2b2d : 0xb3b1ab);
-  hemi.intensity = d ? 0.45 : 1.6;
-  hemi.color.set(d ? 0x8fa3c0 : 0xdfe6ee);
-  lamp.intensity = d ? 60 : 22;
-  coneMat.uniforms.strength.value = d ? .16 : .05;
-  rim.intensity = d ? .7 : .4;
-  renderer.toneMappingExposure = d ? 1 : 1.05;
+// faint falling light streaks far out
+for (let i = 0; i < 18; i++) {
+  const a = rnd() * Math.PI * 2, R = 9 + rnd() * 6, h = 1 + rnd() * 3;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(0.02, h), new THREE.MeshBasicMaterial({ color: AMBER, transparent: true, opacity: .35, toneMapped: false }));
+  m.position.set(Math.sin(a) * R, 2.5 + rnd() * 4, Math.cos(a) * R); m.lookAt(0, m.position.y, 0); turntable.add(m);
 }
-applyTheme();
-dark.addEventListener('change', applyTheme);
+
+// bloom makes the amber edges glow like neon
+let composer = null;
+Promise.all([
+  import('three/addons/postprocessing/EffectComposer.js'), import('three/addons/postprocessing/RenderPass.js'),
+  import('three/addons/postprocessing/UnrealBloomPass.js'), import('three/addons/postprocessing/OutputPass.js'),
+]).then(([{ EffectComposer }, { RenderPass }, { UnrealBloomPass }, { OutputPass }]) => {
+  const c = new EffectComposer(renderer);
+  c.addPass(new RenderPass(scene, camera));
+  c.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.55, 0.35, 1.0));
+  c.addPass(new OutputPass());
+  c.setPixelRatio(Math.min(devicePixelRatio, 1.5)); c.setSize(innerWidth, innerHeight);
+  composer = c;
+}).catch(() => {});
 
 /* ---------- body ---------- */
-const turntable = new THREE.Group(); scene.add(turntable);
 // orient pivots the whole body at the hips so it can lie down for floor moves
 const orient = new THREE.Group(); turntable.add(orient);
 const root = new THREE.Group(); orient.add(root);
@@ -599,7 +639,7 @@ function drawBoard(b) {
     });
   };
   if (b.kind === 'quote') { label('Motivation'); big(QUOTES[b.q % QUOTES.length], 62, 130); }
-  if (b.kind === 'food') { label('Food rule today'); big(document.getElementById('foodRule').textContent, 54, 128); }
+  if (b.kind === 'food') { label('Food rule today'); big(FOOD_TODAY, 54, 128); }
   if (b.kind === 'level') {
     const done = new Set(readLog()).size, i = levelFor(done), next = LEVELS[i + 1];
     label(`Level ${i + 1} of ${LEVELS.length}`); big(LEVELS[i].name, 96, 160, 1);
@@ -635,8 +675,10 @@ function buildBoards() {
     const frameMat = new THREE.MeshStandardMaterial({ color: 0x1b1b1c, roughness: .6, transparent: true });
     const frame = new THREE.Mesh(new THREE.BoxGeometry(1.7, 1.1, 0.06), frameMat); frame.position.set(0, 1.75, -0.04);
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.25, 8), frameMat); pole.position.set(0, 0.62, -0.06);
-    grp.add(frame, screen, pole); turntable.add(grp);
-    const b = { grp, kind: video ? 'video' : kind, ctx: c.getContext('2d'), tex, mats: [screenMat, frameMat], q: Math.floor(Math.random() * 99) + i * 7 };
+    const edgeMat = new THREE.LineBasicMaterial({ color: GLOW, toneMapped: false, transparent: true });
+    const edges = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1.78, 1.18, 0.07)), edgeMat); edges.position.copy(frame.position);
+    grp.add(frame, edges, screen, pole); turntable.add(grp);
+    const b = { grp, kind: video ? 'video' : kind, ctx: c.getContext('2d'), tex, mats: [screenMat, frameMat, edgeMat], q: Math.floor(Math.random() * 99) + i * 7 };
     boards.push(b); if (!video) drawBoard(b);
   });
   // new quotes on the quote boards every few seconds
@@ -649,6 +691,11 @@ function fadeBoards() {
     // boards swinging round to the camera's side fade away so they never block the body
     const o = THREE.MathUtils.clamp((1.2 - _bp.z) / 1.6, 0, 1);
     b.mats.forEach(m => { m.opacity = o; }); b.grp.visible = o > 0.01;
+  }
+  for (const p of pillars) {
+    p.g.getWorldPosition(_bp);
+    const o = THREE.MathUtils.clamp((2.6 - _bp.z) / 1.8, 0, 1);
+    p.mats.forEach(m => { m.opacity = o; }); p.g.visible = o > 0.01;
   }
 }
 document.fonts.load('900 60px "Big Shoulders Display"').finally(() => { buildBoards(); });
@@ -1007,7 +1054,7 @@ function pose(p, dt) {
   allBones.forEach((b, i) => { cur[i].slerp(b.quaternion, a); b.quaternion.copy(cur[i]); });
   orient.updateMatrixWorld(true);
   jumpNow += ((p.jump || 0) - jumpNow) * Math.min(1, dt * 30);
-  orient.position.y = hipH - lowestY() + jumpNow;
+  orient.position.y = hipH - lowestY() + jumpNow + PLAT_H;
 }
 
 /* ---------- day picker ---------- */
@@ -1177,7 +1224,7 @@ function endWorkout(finished) {
     ui.toast.classList.remove('hidden');
     setTimeout(() => ui.toast.classList.add('hidden'), 7000);
   }
-  W = null; keepAwake(false);
+  W = null; keepAwake(false); syncDemo();
   ui.work.classList.add('hidden'); ui.idle.classList.remove('hidden'); ui.intro.classList.remove('hidden');
 }
 
@@ -1196,6 +1243,7 @@ function renderHud() {
   else if (ex.hold) { const left = ex.reps - W.lastRep; ui.n.textContent = left >= 60 ? `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : left; ui.of.textContent = 'sec left'; }
   else { ui.n.textContent = W.lastRep; ui.of.textContent = `/ ${ex.reps}`; drawTally(W.lastRep, ex.reps); }
   [...ui.plan.children].forEach((el, i) => el.className = i < W.ex ? 'done' : i === W.ex ? 'on' : '');
+  syncDemo();
 }
 
 function nextSet() {
@@ -1270,6 +1318,23 @@ addEventListener('keydown', e => {
   if (e.key === ' ' && W && e.target === document.body) { e.preventDefault(); $('pauseBtn').click(); }
 });
 
+/* ---------- demo card: a real person doing the current move ---------- */
+const DEMOS = {"twist": "ACy8D3XmMPE", "jack": "XR0xeuK5zBU", "windmill": "a-KqiYR7CZc", "knee": "ymdS7tM0zws", "crunch": "z1fwSujYhX8", "squat": "m0GcZ24pK6k", "lunge": "YnYA-ughpNQ", "pushup": "WDIpL0pjun0", "plank": "pvIjsG5Svck", "climber": "ixxk9Qfn61o", "floorCrunch": "O0pIQ2UqeCY", "legRaise": "3oIpxsn6FxQ", "bicycle": "eqg47ZuGZXQ", "russian": "wkD8rjkodUI", "jog": "eBQAa9dEalY", "clapUnder": "O_8EUJ7i-PI", "sameKnee": "K2Er6nfOpxk", "kneePress": "O_8EUJ7i-PI", "squatTwist": "bmFOq_bFw6w", "seatedTuck": "t1etqgnWrHo", "seatedTwist": "_cD9f078WQ4", "kneeCrunch": "1S8b8jgas8Q", "flutter": "eEG9uXjx4vQ", "reclineRaise": "EvleorZT7wU", "bridge": "OUgsJ8-Vi0E", "oneLegBridge": "AVAXhy6pl7o", "fig4Bridge": "OUgsJ8-Vi0E", "spiderPlank": "_7TDEL_vwxk", "hipDips": "em4gADvYvMA", "plankPike": "G-2oFuWRgNI", "childPose": "kH12QrSGedM", "catCow": "LIVJZZyZ2qM", "cobra": "JDcdhTuycOI", "pigeon": "op-eDU9eNqM", "hipFlexor": "YDJrofqHUlg", "fig4Stretch": "Xb5gHdYtHnk"};
+let demoOn = (() => { try { return localStorage.getItem('fit-demo') !== 'off'; } catch { return true; } })(), demoId = null;
+function syncDemo() {
+  const ex = W && W.plan[W.ex], id = ex && ex.id !== 'jog' ? DEMOS[ex.id] : null;
+  $('demo').classList.toggle('hidden', !id || !demoOn);
+  $('demoShow').classList.toggle('hidden', !id || demoOn);
+  if (!id) { if (demoId) { $('demoFrame').src = 'about:blank'; demoId = null; } return; }
+  $('demoLabel').textContent = `How to · ${ex.name}`;
+  if (demoOn && id !== demoId) {
+    demoId = id;
+    $('demoFrame').src = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&controls=0&playsinline=1&rel=0&modestbranding=1`;
+  }
+}
+$('demoHide').onclick = () => { demoOn = false; try { localStorage.setItem('fit-demo', 'off'); } catch {} $('demoFrame').src = 'about:blank'; demoId = null; syncDemo(); };
+$('demoShow').onclick = () => { demoOn = true; try { localStorage.setItem('fit-demo', 'on'); } catch {} syncDemo(); };
+
 /* ---------- confetti: kerb paint flying ---------- */
 function confetti(n) {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -1296,7 +1361,7 @@ const reduce = matchMedia('(prefers-reduced-motion: reduce)');
 /* ---------- loop ---------- */
 function resize() {
   const w = innerWidth, h = innerHeight;
-  renderer.setSize(w, h, false); camera.aspect = w / h;
+  renderer.setSize(w, h, false); camera.aspect = w / h; composer?.setSize(w, h);
   narrow = w / h < 0.8;
   camera.fov = narrow ? 38 : 30;
   camera.position.set(0, narrow ? 1.05 : 1.15, narrow ? 5.9 : 5.2);
@@ -1329,14 +1394,14 @@ renderer.setAnimationLoop(() => {
     if (!dragging) spin += diff * Math.min(1, dt * 3);
   } else if (!dragging) {
     dragVel *= 0.94;
-    spin += reduce.matches || DEBUG.has('spin') ? dragVel + (DEBUG.has('spin') ? 0 : 0) : 0.45 * dt + dragVel;
+    spin += reduce.matches || DEBUG.has('spin') ? dragVel + (DEBUG.has('spin') ? 0 : 0) : 0.14 * dt + dragVel;
     if (DEBUG.has('spin')) spin = +DEBUG.get('spin');
   }
   turntable.rotation.y = spin;
   fadeBoards();
   aimCamera(dt);
   pose(currentPose(elapsed), dt);
-  renderer.render(scene, camera);
+  composer ? composer.render() : renderer.render(scene, camera);
 });
 </script>
 </body>
