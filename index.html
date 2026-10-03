@@ -606,8 +606,9 @@ loadBody().then(gltf => {
 });
 
 /* ---------- screens: two framed kiosks, like the arena's, that turn with the body ---------- */
-// Drop your own clips here (e.g. 'media/day-1.mp4') and the second screen plays them, muted. Empty = text only.
-const BOARD_VIDEOS = [];
+// The second screen plays these in turn, muted. Free stock clips from Mixkit for now — swap in your own
+// training clips (portrait-ish, a few seconds each) as you record them.
+const BOARD_VIDEOS = ['media/home-lunges.mp4', 'media/street-run.mp4', 'media/jump-rope.mp4', 'media/lunges.mp4', 'media/jog.mp4', 'media/stretch.mp4'];
 const SCREEN_KINDS = ['quote', 'quote', 'level', 'food', 'days'];
 const SW = 480, SH = 620;                 // canvas pixels, portrait
 const boards = [];
@@ -672,8 +673,14 @@ function buildBoards() {
     const video = i === 1 && BOARD_VIDEOS.length ? BOARD_VIDEOS[0] : null;
     let tex;
     if (video) {
-      const v = Object.assign(document.createElement('video'), { src: video, muted: true, loop: true, playsInline: true, autoplay: true, crossOrigin: 'anonymous' });
-      v.play().catch(() => {}); tex = new THREE.VideoTexture(v);
+      const v = Object.assign(document.createElement('video'), { src: video, muted: true, playsInline: true, autoplay: true, crossOrigin: 'anonymous' });
+      v.setAttribute('playsinline', ''); v.setAttribute('muted', '');
+      let clip = 0;
+      v.addEventListener('ended', () => { clip = (clip + 1) % BOARD_VIDEOS.length; v.src = BOARD_VIDEOS[clip]; v.play().catch(() => {}); });
+      v.play().catch(() => {});
+      // mobile browsers may refuse autoplay until the first tap
+      addEventListener('pointerdown', () => v.paused && v.play().catch(() => {}), { once: true });
+      tex = new THREE.VideoTexture(v);
     } else tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
     const screenMat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, toneMapped: false });
