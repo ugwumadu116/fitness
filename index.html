@@ -1445,7 +1445,7 @@ renderer.setAnimationLoop(() => {
     if (!dragging) spin += diff * Math.min(1, dt * 3);
   } else if (!dragging) {
     dragVel *= 0.94;
-    spin += reduce.matches || DEBUG.has('spin') ? dragVel + (DEBUG.has('spin') ? 0 : 0) : 0.14 * dt + dragVel;
+    spin += reduce.matches || DEBUG.has('spin') ? dragVel + (DEBUG.has('spin') ? 0 : 0) : 0.07 * dt + dragVel;
     if (DEBUG.has('spin')) spin = +DEBUG.get('spin');
   }
   turntable.rotation.y = spin;
