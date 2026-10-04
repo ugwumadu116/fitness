@@ -347,7 +347,8 @@ function workoutMinutes(plan) {
   plan.forEach((x, i) => { t += x.sets * x.reps * x.dur + (x.sets - 1) * (x.rest || REST_SET) + (i ? x.restEx || REST_EX : 0); });
   return Math.round(t / 60);
 }
-const MODELS = ['models/joel.glb', 'models/xbot.glb'];
+// ?model=path previews another body without touching the live one
+const MODELS = [new URLSearchParams(location.search).get('model'), 'models/joel.glb', 'models/xbot.glb'].filter(Boolean);
 
 /* ---------- log (per device for now) ---------- */
 const dayKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -461,6 +462,8 @@ lamp.position.set(0.6, 5.6, 2.2); lamp.castShadow = true; lamp.shadow.mapSize.se
 scene.add(lamp, lamp.target);
 const rim = new THREE.DirectionalLight(0xff8a2a, 1.1); rim.position.set(-2, 3, -4); scene.add(rim);
 const rim2 = new THREE.DirectionalLight(0xffb060, 0.5); rim2.position.set(3, 2, -3); scene.add(rim2);
+// soft fill from the viewer's side so the overhead spot doesn't sink the eyes into shadow
+const fill = new THREE.DirectionalLight(0xffe2c4, 0.9); fill.position.set(0.5, 1.6, 6); scene.add(fill);
 
 // back wall: a dome whose horizon glows sodium-amber
 const dome = new THREE.Mesh(new THREE.SphereGeometry(40, 48, 24), new THREE.ShaderMaterial({
@@ -599,7 +602,11 @@ async function loadBody() {
 loadBody().then(gltf => {
   const body = gltf.scene;
   body.traverse(o => {
-    if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; }
+    if (o.isMesh) {
+      o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false;
+      // skin should be matte: a glossy face catches the spotlight and the bloom turns it into glare
+      for (const m of [].concat(o.material)) if (m && 'roughness' in m) { m.roughness = Math.max(m.roughness, 0.92); m.metalness = 0; m.envMapIntensity = 0.4; }
+    }
     if (o.isBone) {
       allBones.push(o);
       const short = o.name.replace(/^mixamorig\d*:?/, '');
@@ -1347,6 +1354,11 @@ const DEBUG = new URLSearchParams(location.search);
 if (DEBUG.has('bare')) document.querySelector('.hud').style.display = 'none';
 if (DEBUG.has('dbg')) Object.assign(window, { __B: B, __orient: orient, __CONTACT: CONTACT });
 function currentPose(clock) {
+  if (DEBUG.has('cycle')) {        // preview mode: run through a few moves on a loop
+    const list = ['idle', 'jack', 'squat', 'knee', 'windmill', 'plank', 'bridge', 'crunch'], slot = Math.floor(clock / 4) % list.length, m = list[slot];
+    if (m === 'idle') return MOVES.idle(clock);
+    const d = EX[m].dur, t = clock % 4; return MOVES[m]((t % d) / d, Math.floor(t / d) % 2 ? -1 : 1, clock);
+  }
   if (DEBUG.has('move')) { const m = DEBUG.get('move'), d = EX[m]?.dur || 1, ph = DEBUG.has('s') ? +DEBUG.get('s') : (clock % d) / d;
     return m === 'idle' ? MOVES.idle(clock) : MOVES[m](ph, +(DEBUG.get('side') || 1), clock); }
   if (!W) return MOVES.idle(clock);

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Body Lab</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23121314'/%3E%3Ccircle cx='16' cy='11' r='6' fill='%23F2A93B'/%3E%3Crect x='5' y='22' width='22' height='5' fill='%23F5C518'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600&family=Big+Shoulders+Display:wght@900&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #0a0705; --ink: #EDEAE2; --muted: #A9A69E; --amber: #F2A93B; --line: rgba(237,234,226,.14); }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--bg); color: var(--ink); font: 400 15px/1.45 Archivo, system-ui, sans-serif; padding: 16px; min-height: 100dvh; }
+  h1 { font: 900 clamp(30px, 6vw, 46px)/1 "Big Shoulders Display", sans-serif; text-transform: uppercase; }
+  p.sub { color: var(--muted); margin: 6px 0 16px; max-width: 60ch; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+  figure { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #000; }
+  iframe { width: 100%; aspect-ratio: 3 / 4; border: 0; display: block; }
+  figcaption { padding: 10px 12px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  figcaption b { font: 900 22px/1 "Big Shoulders Display", sans-serif; text-transform: uppercase; color: var(--amber); }
+  figcaption span { color: var(--muted); font-size: 13px; text-align: right; }
+</style>
+</head>
+<body>
+  <h1>Body lab</h1>
+  <p class="sub">Candidate 3D bodies, each running the same moves. The live site keeps its current body until you pick one.</p>
+  <div class="grid">
+    <figure><iframe loading="lazy" title="Current body" src="index.html?bare&cycle&model=models/joel.glb&spin=0.4"></iframe><figcaption><b>Live now</b><span>Shirt, jeans, bare feet</span></figcaption></figure>
+    <figure><iframe loading="lazy" title="Option A" src="index.html?bare&cycle&model=models/lab/A.glb&spin=0.4"></iframe><figcaption><b>A</b><span>Shirtless, shorts, sneakers</span></figcaption></figure>
+    <figure><iframe loading="lazy" title="Option B" src="index.html?bare&cycle&model=models/lab/B.glb&spin=0.4"></iframe><figcaption><b>B</b><span>Black tank, shorts, sneakers</span></figcaption></figure>
+    <figure><iframe loading="lazy" title="Option C" src="index.html?bare&cycle&model=models/lab/C.glb&spin=0.4"></iframe><figcaption><b>C</b><span>Black tee, shorts, sneakers</span></figcaption></figure>
+  </div>
+</body>
+</html>
