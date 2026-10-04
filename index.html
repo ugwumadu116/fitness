@@ -613,7 +613,8 @@ loadBody().then(gltf => {
   root.updateMatrixWorld(true);
   const box2 = new THREE.Box3().setFromObject(body);
   const c = box2.getCenter(new THREE.Vector3());
-  body.position.x -= c.x / s; body.position.z -= c.z / s;
+  // centre it and stand its feet on y = 0, whatever origin the model was exported with
+  body.position.x -= c.x; body.position.z -= c.z; body.position.y -= box2.min.y;   // body is not under the scaled root yet, so these are already root-local units
   root.add(body);
   root.updateMatrixWorld(true);
 
@@ -1344,6 +1345,7 @@ function tickWorkout(dt) {
 
 const DEBUG = new URLSearchParams(location.search);
 if (DEBUG.has('bare')) document.querySelector('.hud').style.display = 'none';
+if (DEBUG.has('dbg')) Object.assign(window, { __B: B, __orient: orient, __CONTACT: CONTACT });
 function currentPose(clock) {
   if (DEBUG.has('move')) { const m = DEBUG.get('move'), d = EX[m]?.dur || 1, ph = DEBUG.has('s') ? +DEBUG.get('s') : (clock % d) / d;
     return m === 'idle' ? MOVES.idle(clock) : MOVES[m](ph, +(DEBUG.get('side') || 1), clock); }
@@ -1454,8 +1456,8 @@ let camDist = 5.6;
 const onFloor = () => { const m = DEBUG.get('move') || (W && W.plan[W.ex].id); return !!(m && EX[m]?.floor); };
 function aimCamera(dt) {
   const fl = onFloor();
-  const want = fl ? (narrow ? 0.05 : 0.3) : narrow ? (W ? 0.55 : 1.1) : (W ? 0.75 : 0.62);
-  const dist = narrow ? (fl ? 6.6 : W ? 5.9 : 7.2) : W ? 5.2 : 6.6;
+  const want = fl ? (narrow ? 0.05 : 0.3) : narrow ? (W ? 1.0 : 1.1) : (W ? 0.75 : 0.62);
+  const dist = narrow ? (fl ? 6.6 : W ? 6.8 : 7.2) : W ? 5.2 : 6.6;
   lookY += (want - lookY) * Math.min(1, dt * 4);
   camDist += (dist - camDist) * Math.min(1, dt * 4);
   camera.position.z = camDist;
