@@ -19,16 +19,18 @@
   figcaption { padding: 10px 12px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
   figcaption b { font: 900 22px/1 "Big Shoulders Display", sans-serif; text-transform: uppercase; color: var(--amber); }
   figcaption span { color: var(--muted); font-size: 13px; text-align: right; }
+  figcaption a { color: var(--amber); font-size: 13px; font-weight: 600; min-height: 44px; display: inline-flex; align-items: center; }
+  figcaption a:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
 </style>
 </head>
 <body>
   <h1>Body lab</h1>
   <p class="sub">Candidate 3D bodies, each running the same moves. The live site keeps its current body until you pick one.</p>
   <div class="grid">
-    <figure><iframe loading="lazy" title="Current body" src="index.html?bare&cycle&model=models/joel.glb&spin=0.4"></iframe><figcaption><b>Live now</b><span>Shirt, jeans, bare feet</span></figcaption></figure>
-    <figure><iframe loading="lazy" title="Option A" src="index.html?bare&cycle&model=models/lab/A.glb&spin=0.4"></iframe><figcaption><b>A</b><span>Shirtless, shorts, sneakers</span></figcaption></figure>
-    <figure><iframe loading="lazy" title="Option B" src="index.html?bare&cycle&model=models/lab/B.glb&spin=0.4"></iframe><figcaption><b>B</b><span>Black tank, shorts, sneakers</span></figcaption></figure>
-    <figure><iframe loading="lazy" title="Option C" src="index.html?bare&cycle&model=models/lab/C.glb&spin=0.4"></iframe><figcaption><b>C</b><span>Black tee, shorts, sneakers</span></figcaption></figure>
+    <figure><iframe loading="lazy" title="Current body" src="index.html?bare&cycle&model=models/joel.glb&spin=0.4"></iframe><figcaption><b>Live now</b><span>Shirt, jeans, bare feet</span><a href="index.html?model=models/joel.glb" target="_blank" rel="noopener">Open big</a></figcaption></figure>
+    <figure><iframe loading="lazy" title="Option A" src="index.html?bare&cycle&model=models/lab/A.glb&spin=0.4"></iframe><figcaption><b>A</b><span>Shirtless, shorts, sneakers</span><a href="index.html?model=models/lab/A.glb" target="_blank" rel="noopener">Open big</a></figcaption></figure>
+    <figure><iframe loading="lazy" title="Option B" src="index.html?bare&cycle&model=models/lab/B.glb&spin=0.4"></iframe><figcaption><b>B</b><span>Black tank, shorts, sneakers</span><a href="index.html?model=models/lab/B.glb" target="_blank" rel="noopener">Open big</a></figcaption></figure>
+    <figure><iframe loading="lazy" title="Option C" src="index.html?bare&cycle&model=models/lab/C.glb&spin=0.4"></iframe><figcaption><b>C</b><span>Black tee, shorts, sneakers</span><a href="index.html?model=models/lab/C.glb" target="_blank" rel="noopener">Open big</a></figcaption></figure>
   </div>
 </body>
 </html>
